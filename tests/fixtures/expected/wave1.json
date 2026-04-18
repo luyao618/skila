@@ -1,0 +1,20 @@
+{
+  "wave": 1,
+  "kind": "AskUserQuestion",
+  "multiSelect": true,
+  "question": "Select skills to crystallize from this session:",
+  "options": [
+    {
+      "label": "[NEW@global] docker-multistage-optimize — Shrink Python Docker images with multi-stage builds and .dockerignore (~45 lines, medium)",
+      "description": "Create new global skill: docker-multistage-optimize"
+    },
+    {
+      "label": "[NEW@local] git-precommit-ruff-pytest — Local pre-commit hook recipe: ruff check + pytest guard (~20 lines, low)",
+      "description": "Create new local skill: git-precommit-ruff-pytest"
+    },
+    {
+      "label": "[UPDATE→azure-pipeline-debug] Add deployment-correlation step using az monitor activity-log (~35 lines, low)",
+      "description": "Update existing skill: azure-pipeline-debug"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "wave": 2,
+  "kind": "AskUserQuestion",
+  "multiSelect": false,
+  "question": "Review the proposed patch for azure-pipeline-debug:",
+  "diff": "--- a/azure-pipeline-debug/SKILL.md\n+++ b/azure-pipeline-debug/SKILL.md\n@@ -8,6 +8,12 @@ Diagnose and fix failing Azure DevOps CI/CD pipelines end-to-end.\n 4. Fetch the specific failed step log: `az pipelines runs logs show --run-id <run-id> --log-id <log-id>`.\n 5. Search log output for patterns: `error:`, `FAILED`, `exit code`, `Exception`, `fatal`.\n-6. Cross-reference the failure timestamp with recent commits: `git log --since=\"<timestamp>\"`.\n+6. Fetch full log content and save locally: `az pipelines runs logs show ... > stage.log`.\n+7. Diff recent pipeline YAML changes: `git log --diff-filter=M -- '*.yml' '*.yaml'`.\n+8. Correlate failure timestamp with deployment events:\n+   `az monitor activity-log list --start-time <ts> --resource-group <rg>`.\n+9. Cross-reference the failure timestamp with recent commits: `git log --since=\"<timestamp>\"`.\n",
+  "options": [
+    {
+      "label": "[Apply patch]",
+      "description": "Apply the diff and write the updated SKILL.md"
+    },
+    {
+      "label": "[Skip]",
+      "description": "Skip this update for now"
+    },
+    {
+      "label": "[Show full new version]",
+      "description": "Show the complete proposed SKILL.md before deciding"
+    }
+  ]
+}

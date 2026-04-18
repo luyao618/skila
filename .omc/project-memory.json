@@ -1,0 +1,260 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1776526276738,
+  "projectRoot": "/Users/yao/work/code/personal/skila",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {},
+  "hotPaths": [
+    {
+      "path": "docs/research/hermes-and-memex-study.md",
+      "accessCount": 5,
+      "lastAccessed": 1776530160853,
+      "type": "directory"
+    },
+    {
+      "path": "skills/skila/SKILL.md",
+      "accessCount": 4,
+      "lastAccessed": 1776530062321,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 4,
+      "lastAccessed": 1776530118615,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/references/quality-bar.md",
+      "accessCount": 3,
+      "lastAccessed": 1776530062214,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/references/proposal-criteria.md",
+      "accessCount": 3,
+      "lastAccessed": 1776530062268,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/references/skill-creator-schema.md",
+      "accessCount": 2,
+      "lastAccessed": 1776529797602,
+      "type": "file"
+    },
+    {
+      "path": "tests/test_scripts_shrink.sh",
+      "accessCount": 2,
+      "lastAccessed": 1776529987544,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/assets/proposal-row.tmpl",
+      "accessCount": 2,
+      "lastAccessed": 1776530057242,
+      "type": "file"
+    },
+    {
+      "path": ".claude-plugin/plugin.json",
+      "accessCount": 2,
+      "lastAccessed": 1776530067486,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/scripts/validate_skill.py",
+      "accessCount": 2,
+      "lastAccessed": 1776530072008,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/scripts/lint_skill.py",
+      "accessCount": 2,
+      "lastAccessed": 1776530072061,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/assets/prompts/prompt-templates.md",
+      "accessCount": 2,
+      "lastAccessed": 1776530072113,
+      "type": "file"
+    },
+    {
+      "path": "progress.txt",
+      "accessCount": 1,
+      "lastAccessed": 1776529191201,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/scripts/scan_inventory.py",
+      "accessCount": 1,
+      "lastAccessed": 1776529595328,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/assets/SKILL.md.tmpl",
+      "accessCount": 1,
+      "lastAccessed": 1776529651466,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/skills/global/azure-pipeline-debug/SKILL.md",
+      "accessCount": 1,
+      "lastAccessed": 1776529875112,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/skills/local/local-test-helper/SKILL.md",
+      "accessCount": 1,
+      "lastAccessed": 1776529875237,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/skills/malformed/bad-skill/SKILL.md",
+      "accessCount": 1,
+      "lastAccessed": 1776529875361,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/skills/prose-only-fetch-logs/SKILL.md",
+      "accessCount": 1,
+      "lastAccessed": 1776529875481,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/session-empty.md",
+      "accessCount": 1,
+      "lastAccessed": 1776529875608,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/session-single-new.md",
+      "accessCount": 1,
+      "lastAccessed": 1776529875729,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/session-update.md",
+      "accessCount": 1,
+      "lastAccessed": 1776529875862,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/session-multi.md",
+      "accessCount": 1,
+      "lastAccessed": 1776529875986,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/session-garbage.md",
+      "accessCount": 1,
+      "lastAccessed": 1776529876126,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/README.md",
+      "accessCount": 1,
+      "lastAccessed": 1776529876251,
+      "type": "file"
+    },
+    {
+      "path": "tests/bin/skila_dryrun.py",
+      "accessCount": 1,
+      "lastAccessed": 1776529910328,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/expected/wave1.json",
+      "accessCount": 1,
+      "lastAccessed": 1776529919078,
+      "type": "file"
+    },
+    {
+      "path": "tests/fixtures/expected/wave2.json",
+      "accessCount": 1,
+      "lastAccessed": 1776529919214,
+      "type": "file"
+    },
+    {
+      "path": "tests/test_validate.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776529976668,
+      "type": "file"
+    },
+    {
+      "path": "tests/test_lint.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776529976794,
+      "type": "file"
+    },
+    {
+      "path": "tests/test_scan.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776529976917,
+      "type": "file"
+    },
+    {
+      "path": "tests/test_dryrun_empty.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776529977040,
+      "type": "file"
+    },
+    {
+      "path": "tests/test_dryrun_wave1.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776529977164,
+      "type": "file"
+    },
+    {
+      "path": "tests/test_dryrun_wave2.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776529977284,
+      "type": "file"
+    },
+    {
+      "path": "tests/test_dryrun_summary.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776529977408,
+      "type": "file"
+    },
+    {
+      "path": "tests/test_atomic_rename.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776529977539,
+      "type": "file"
+    },
+    {
+      "path": "tests/run_all.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776529977920,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

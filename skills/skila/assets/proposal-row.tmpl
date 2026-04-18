@@ -1,0 +1,20 @@
+# Proposal Row Templates — Wave-1 AskUserQuestion Row Variants
+#
+# SCOPE is baked into the row variant tag — no separate scope question is emitted
+# (R14, Iteration-2 collapse). Each row encodes: intent + scope + name + description
+# + estimated size + complexity rating.
+#
+# SOFT CAP: 8 rows maximum in a single Wave-1 AskUserQuestion. When more candidates
+# exist, collapse low-confidence ones into the overflow row (last variant below).
+# For ambiguous-scope [NEW] candidates, emit only the more-likely scope when the
+# total row count would otherwise exceed 8.
+#
+# OVERFLOW ROW: used when N additional low-confidence candidates were identified but
+# omitted to stay within the soft cap. Replace {{N}} with the actual count.
+#
+# Row variants (each on its own line below — emit exactly one per proposal):
+
+[NEW@global] {{NAME}} — {{DESCRIPTION}} (~{{LINES}} lines, {{COMPLEXITY}})
+[NEW@local] {{NAME}} — {{DESCRIPTION}} (~{{LINES}} lines, {{COMPLEXITY}})
+[UPDATE→{{EXISTING_NAME}}] {{NAME}} — {{DESCRIPTION}} (~{{LINES}} lines, {{COMPLEXITY}})
+[+{{N}} more low-confidence candidates omitted]

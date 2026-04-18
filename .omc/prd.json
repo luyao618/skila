@@ -7,7 +7,7 @@
       "id": "US-000",
       "title": "Phase 0 HARD GATE — research doc lands first",
       "priority": 0,
-      "passes": false,
+      "passes": true,
       "acceptanceCriteria": [
         "File /Users/yao/work/code/personal/skila/docs/research/hermes-and-memex-study.md exists",
         "Doc cites every Phase-0 path: tools/skill_manager_tool.py (hermes), hermes-agent/skills/, memex/skills/memex-retro/SKILL.md, memex/.claude-plugin/plugin.json, memex/src/commands/write.ts, memex/src/lib/store.ts, memex/hooks/",
@@ -20,7 +20,7 @@
       "id": "US-001",
       "title": "Phase 1 — plugin skeleton (.claude-plugin/plugin.json + skills/skila/SKILL.md shell)",
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "acceptanceCriteria": [
         "File .claude-plugin/plugin.json exists with keys name='skila', version='0.1.0', description, license, and a compatibility object pinning python3 >= 3.9",
         "File skills/skila/SKILL.md exists with YAML frontmatter (name='skila', pushy description containing the literal token '/skila', optional argument-hint)",
@@ -32,7 +32,7 @@
       "id": "US-002",
       "title": "Phase 2a — scripts/ exactly 3 stdlib Python helpers",
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "acceptanceCriteria": [
         "skills/skila/scripts/ contains exactly these three files: validate_skill.py, scan_inventory.py, lint_skill.py (no other files)",
         "validate_skill.py: given a SKILL.md path, exits non-zero on any of (frontmatter parse error, name != parent dir, description > 1024 chars, body > 500 lines); also asserts sys.version_info >= (3,9)",
@@ -45,7 +45,7 @@
       "id": "US-003",
       "title": "Phase 2b — references/ (3 files) and assets/ with prompts/",
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "acceptanceCriteria": [
         "skills/skila/references/skill-creator-schema.md exists (codifies frontmatter rules)",
         "skills/skila/references/quality-bar.md exists (codifies deterministic→scripts, knowledge→references, output→assets rule)",
@@ -59,7 +59,7 @@
       "id": "US-004",
       "title": "Phase 3 — wire SKILL.md to the 2-wave UI procedure",
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "acceptanceCriteria": [
         "SKILL.md body contains numbered procedure steps for: trigger gate, distill, inventory scan, LLM proposal pass, empty-result branch, Wave-1 multi-select, Wave-2 per-update follow-up, validate (BLOCKING), atomic write inline, summary",
         "SKILL.md explicitly forbids reading ~/.claude/projects/",
@@ -72,7 +72,7 @@
       "id": "US-005",
       "title": "Phase 4 — tests/ fixtures + dry-run shim + 11 test scripts",
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "acceptanceCriteria": [
         "All fixture files exist: tests/fixtures/README.md, session-empty.md, session-single-new.md, session-update.md, session-multi.md, session-garbage.md, expected/wave1.json, expected/wave2.json, plus tests/fixtures/skills/ subdirs",
         "tests/bin/skila_dryrun.py exists and emits AskUserQuestion JSON from a fixture path (no LLM invocation)",
@@ -85,7 +85,7 @@
       "id": "US-006",
       "title": "Phase 5 — README + LICENSE polish + spec-trace audit",
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "acceptanceCriteria": [
         "README.md updated with: install snippet, /skila invocation example, link to spec + plan + research doc",
         "docs/research/hermes-and-memex-study.md has a 'Trace Matrix' section mapping each requirement (R1..R19) to an implementation file/line",

@@ -260,4 +260,24 @@ _Future deviations from this plan are appended here per R-DOC-3._
 
 ## Trace Matrix (R1..R19 → implementation)
 
-_Filled during Phase 5 per US-006._
+| R# | Requirement (one-line restate) | Implementation file:line or test |
+|---|---|---|
+| R1 | CC plugin `/skila` distills in-context memory into 0/N Anthropic-spec skill packages (SKILL.md + scripts/ + references/ + assets/). | `skills/skila/SKILL.md:1-5` (frontmatter declares the plugin); `skills/skila/references/quality-bar.md:1-10` (quality bar prohibiting garbage skills) |
+| R2 | Quality bar: never produce garbage skills; deterministic→scripts/, knowledge→references/, output→assets/; SKILL.md ≤500 lines. | `skills/skila/references/quality-bar.md:13-117` (three rules + self-dogfood table); `skills/skila/SKILL.md:210-224` (Quality Bar section citing the reference) |
+| R3 | Trigger ONLY via `/skila`; do NOT read `~/.claude/projects/` or JSONL transcripts. | `skills/skila/SKILL.md:9-13` (Trigger Gate); `skills/skila/SKILL.md:20-22` (IMPORTANT block forbidding `~/.claude/projects/`); `skills/skila/SKILL.md:196` (Constraints — first bullet) |
+| R4 | Scope (`global` vs `local`) baked into Wave-1 row variant — no separate scope question. | `skills/skila/SKILL.md:55-59` (Step 4b resolve scope); `skills/skila/assets/proposal-row.tmpl:17-18` (`[NEW@global]` and `[NEW@local]` variants) |
+| R5 | YAML frontmatter with `name`, `description`, optional `argument-hint`; markdown body. | `skills/skila/scripts/validate_skill.py:93-97` (required-key checks); `skills/skila/SKILL.md:1-5` (frontmatter with `argument-hint`) |
+| R6 | Similarity = pure LLM judgment over inventory `(name, description)` pairs; no embeddings. | `skills/skila/SKILL.md:44-50` (Step 4 LLM proposal pass); `skills/skila/assets/prompts/prompt-templates.md:57-97` (Pass 2 similarity prompt — "Use pure LLM judgment") |
+| R7 | Quality criteria (any one): complex success / reusable workflow / user correction-or-preference. | `skills/skila/references/proposal-criteria.md:1-96` (all three criteria + disjunction rule) |
+| R8 | Empty result is first-class — print "no skill worth crystallizing" and exit. | `skills/skila/SKILL.md:87-96` (Step 5 Empty-Result Branch); `tests/test_dryrun_empty.sh` |
+| R9 | Plugin shape: `.claude-plugin/plugin.json` + `skills/skila/SKILL.md`; no required MCP server. | `.claude-plugin/plugin.json:1-11` (full manifest — name, version, description, license, compatibility, keywords) |
+| R10 | R-DOC-1 hard gate: research doc committed before any code in `skills/`, `src/`, `.claude-plugin/`. | `docs/research/hermes-and-memex-study.md:1-11` (purpose header declaring the hard gate); git log ordering (research doc commit precedes all implementation commits) |
+| R11 | R-DOC-2: research doc enumerates borrow/diverge/why for each insight with source-line anchors. | `docs/research/hermes-and-memex-study.md:215-239` (§4 Borrow/Diverge/Why Matrix — 19 rows with anchors) |
+| R12 | R-DOC-3: every implementation commit cites the relevant research-doc section; deviations append a Decision Update. | `docs/research/hermes-and-memex-study.md:251-256` (§6 Open Questions / Decision Updates placeholder); `skills/skila/scripts/validate_skill.py:7-8` (R-DOC-3 cite comment) |
+| R13 | Wave 1 — single multi-select `AskUserQuestion` with `[NEW@global]`/`[NEW@local]`/`[UPDATE→X]` rows; Wave 2 — per-`[UPDATE]` follow-up with Apply/Skip/Show + inline diff. | `skills/skila/SKILL.md:98-128` (Steps 6 and 7); `tests/test_dryrun_wave1.sh`; `tests/test_dryrun_wave2.sh` |
+| R14 | Row format encodes scope + intent; `[NEW]` emits two rows when both scopes plausible; soft cap of 8. | `skills/skila/assets/proposal-row.tmpl:1-20` (all four row variant templates + soft-cap header comment); `skills/skila/SKILL.md:70-77` (Step 4d soft-cap logic) |
+| R15 | Atomic writes via POSIX `mv` of sibling `.tmp` file; no separate `atomic_write.py`. | `skills/skila/SKILL.md:142-175` (Step 9 Atomic Write — cat to `.tmp` then `mv`; explicit "No helper script"); `tests/test_atomic_rename.sh` |
+| R16 | End-of-run summary `N created, M updated, K skipped, L discarded` emitted by SKILL.md plan-text. | `skills/skila/SKILL.md:177-191` (Step 10 Summary); `tests/test_dryrun_summary.sh` |
+| R17 | `lint_skill.py` is advisory only — always exits 0; warnings appear inline, never block writes. | `skills/skila/scripts/lint_skill.py:4` (docstring "Always exits 0"); `skills/skila/scripts/lint_skill.py:138` (`sys.exit(0)` — hard requirement comment); `tests/test_lint.sh` |
+| R18 | `validate_skill.py` is blocking — non-zero exit ⇒ skila refuses the write for that proposal. | `skills/skila/scripts/validate_skill.py:25-27` (`fail()` calls `sys.exit(1)`); `skills/skila/SKILL.md:129-141` (Step 8 Validate BLOCKING); `tests/test_validate.sh` |
+| R19 | Non-goals: no transcript reading, no Stop-hook, no embeddings, no cross-machine sync, no writes outside `~/.claude/skills/` / `<cwd>/.claude/skills/`. | `skills/skila/SKILL.md:194-207` (Constraints — NEVER violate — all five bullets) |

@@ -1,0 +1,11 @@
+{
+  "active": true,
+  "iteration": 1,
+  "task_description": "Implement skila plugin per .omc/plans/skila-implementation-plan.md",
+  "_meta": {
+    "mode": "ralph",
+    "sessionId": null,
+    "updatedAt": "2026-04-18T16:19:51.279Z",
+    "updatedBy": "state_write_tool"
+  }
+}
