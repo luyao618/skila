@@ -1,0 +1,96 @@
+{
+  "task": "Implement skila — a Claude Code plugin that distills the agent's in-context session memory into production-ready Anthropic-spec skill packages",
+  "spec": ".omc/specs/deep-interview-skila-distill.md",
+  "plan": ".omc/plans/skila-implementation-plan.md",
+  "stories": [
+    {
+      "id": "US-000",
+      "title": "Phase 0 HARD GATE — research doc lands first",
+      "priority": 0,
+      "passes": false,
+      "acceptanceCriteria": [
+        "File /Users/yao/work/code/personal/skila/docs/research/hermes-and-memex-study.md exists",
+        "Doc cites every Phase-0 path: tools/skill_manager_tool.py (hermes), hermes-agent/skills/, memex/skills/memex-retro/SKILL.md, memex/.claude-plugin/plugin.json, memex/src/commands/write.ts, memex/src/lib/store.ts, memex/hooks/",
+        "Doc contains a Borrow/Diverge/Why matrix where every row has a source-line anchor matching regex '[a-zA-Z_./]+:[0-9]+(-[0-9]+)?'",
+        "Doc contains a Decision Record section pinning Option B (Hybrid pure-skill + 3 stdlib scripts)",
+        "git log --diff-filter=A --name-only shows zero files added under skills/, src/, or .claude-plugin/ before this doc"
+      ]
+    },
+    {
+      "id": "US-001",
+      "title": "Phase 1 — plugin skeleton (.claude-plugin/plugin.json + skills/skila/SKILL.md shell)",
+      "priority": 1,
+      "passes": false,
+      "acceptanceCriteria": [
+        "File .claude-plugin/plugin.json exists with keys name='skila', version='0.1.0', description, license, and a compatibility object pinning python3 >= 3.9",
+        "File skills/skila/SKILL.md exists with YAML frontmatter (name='skila', pushy description containing the literal token '/skila', optional argument-hint)",
+        "SKILL.md body is ≤ 500 lines",
+        "README.md updated with at least one paragraph covering install + /skila usage"
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "Phase 2a — scripts/ exactly 3 stdlib Python helpers",
+      "priority": 2,
+      "passes": false,
+      "acceptanceCriteria": [
+        "skills/skila/scripts/ contains exactly these three files: validate_skill.py, scan_inventory.py, lint_skill.py (no other files)",
+        "validate_skill.py: given a SKILL.md path, exits non-zero on any of (frontmatter parse error, name != parent dir, description > 1024 chars, body > 500 lines); also asserts sys.version_info >= (3,9)",
+        "scan_inventory.py: walks ~/.claude/skills/ and <cwd>/.claude/skills/, parses frontmatter, emits JSON list of {name, description, scope, path}; distinguishes 'absent' vs 'empty' dir; stdlib-only (no pyyaml import)",
+        "lint_skill.py: given a SKILL.md, emits JSON {status: 'PASS'|'WARN', reasons: [...]}; ALWAYS exits 0 even when WARN",
+        "Each script's substantive LOC (total - blank - full-line-comment) > 10"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Phase 2b — references/ (3 files) and assets/ with prompts/",
+      "priority": 3,
+      "passes": false,
+      "acceptanceCriteria": [
+        "skills/skila/references/skill-creator-schema.md exists (codifies frontmatter rules)",
+        "skills/skila/references/quality-bar.md exists (codifies deterministic→scripts, knowledge→references, output→assets rule)",
+        "skills/skila/references/proposal-criteria.md exists (the 3 quality criteria)",
+        "skills/skila/assets/SKILL.md.tmpl exists (Anthropic-spec scaffold)",
+        "skills/skila/assets/proposal-row.tmpl exists (R14 row variants)",
+        "skills/skila/assets/prompts/prompt-templates.md exists (NOT under references/)"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Phase 3 — wire SKILL.md to the 2-wave UI procedure",
+      "priority": 4,
+      "passes": false,
+      "acceptanceCriteria": [
+        "SKILL.md body contains numbered procedure steps for: trigger gate, distill, inventory scan, LLM proposal pass, empty-result branch, Wave-1 multi-select, Wave-2 per-update follow-up, validate (BLOCKING), atomic write inline, summary",
+        "SKILL.md explicitly forbids reading ~/.claude/projects/",
+        "SKILL.md mandates writing to <name>.tmp then 'mv' to atomic-rename (no helper script reference)",
+        "SKILL.md references the row variants `[NEW@global]`, `[NEW@local]`, `[UPDATE→` and the Wave-2 options 'Apply patch', 'Skip', 'Show full new version'",
+        "SKILL.md states the Wave-1 soft cap of 8 rows with overflow collapsing to '[+N more low-confidence candidates omitted]'"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Phase 4 — tests/ fixtures + dry-run shim + 11 test scripts",
+      "priority": 5,
+      "passes": false,
+      "acceptanceCriteria": [
+        "All fixture files exist: tests/fixtures/README.md, session-empty.md, session-single-new.md, session-update.md, session-multi.md, session-garbage.md, expected/wave1.json, expected/wave2.json, plus tests/fixtures/skills/ subdirs",
+        "tests/bin/skila_dryrun.py exists and emits AskUserQuestion JSON from a fixture path (no LLM invocation)",
+        "All test scripts exist and are executable: test_validate.sh, test_lint.sh, test_scan.sh, test_dryrun_empty.sh, test_dryrun_wave1.sh, test_dryrun_wave2.sh, test_dryrun_summary.sh, test_atomic_rename.sh, test_scripts_shrink.sh, test_research_coverage.sh, run_all.sh",
+        "tests/test_scripts_shrink.sh header documents 'substantive LOC = total - lines matching ^\\s*$ or ^\\s*#' algorithm",
+        "bash tests/run_all.sh exits 0 (all sub-tests pass)"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "Phase 5 — README + LICENSE polish + spec-trace audit",
+      "priority": 6,
+      "passes": false,
+      "acceptanceCriteria": [
+        "README.md updated with: install snippet, /skila invocation example, link to spec + plan + research doc",
+        "docs/research/hermes-and-memex-study.md has a 'Trace Matrix' section mapping each requirement (R1..R19) to an implementation file/line",
+        "All AC1–AC16 from plan §4 verifiable: for each, point to either a test script that proves it or a file path that satisfies it"
+      ]
+    }
+  ]
+}
