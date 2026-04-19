@@ -1,0 +1,4 @@
+[
+  {"tool": "Bash", "args": {"command": "docker run -v $PWD:/app alpine"}},
+  {"tool": "Read", "args": {"file_path": "Dockerfile"}}
+]

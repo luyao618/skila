@@ -41,7 +41,8 @@
       "id": "AC4",
       "phase": 1,
       "title": "package.json declares @yao/skila with bin/engines/version + esbuild+tailwindcss devDeps",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 2ca0bef. package.json has name=@yao/skila v0.1.0, bin.skila=dist/cli.js, engines.node>=20, type=module, files=[dist,.claude-plugin,smithery.yaml,README.md,LICENSE]. devDependencies: typescript, @types/node, esbuild, tailwindcss, @codemirror/{state,view,lang-markdown}, marked. Runtime dependencies: only gray-matter.",
       "acceptanceCriteria": [
         "package.json has name=@yao/skila",
         "package.json has bin.skila=dist/cli.js",
@@ -55,7 +56,8 @@
       "id": "AC5",
       "phase": 1,
       "title": ".claude-plugin/plugin.json declares /skila + PostToolUse + Stop hooks",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 2ca0bef. plugin.json declares /skila slash, PostToolUse + Stop hooks both → ${CLAUDE_PLUGIN_ROOT}/dist/hooks/feedback.cjs (relative-resolved, survives npm i -g).",
       "acceptanceCriteria": [
         ".claude-plugin/plugin.json declares slash command /skila",
         ".claude-plugin/plugin.json declares PostToolUse hook → dist/hooks/feedback.cjs",
@@ -67,7 +69,8 @@
       "id": "AC6",
       "phase": 1,
       "title": "smithery.yaml declares npx -y @yao/skila mcp stdio",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 2ca0bef. smithery.yaml: stdio transport, command `npx -y @yao/skila mcp` (memex pattern).",
       "acceptanceCriteria": [
         "smithery.yaml exists at repo root",
         "smithery.yaml command is `npx -y @yao/skila mcp`",
@@ -78,7 +81,8 @@
       "id": "AC7",
       "phase": 1,
       "title": "npm pack --dry-run ships dist/ + .claude-plugin/ + smithery.yaml + README.md + LICENSE; vendor assets present; no CDN URLs",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 2ca0bef. npm install (109 pkgs ok), npm run build ok (cm.js=502kb, tw.css=8kb), npm pack --dry-run lists 11 files including dist/web/vendor/{cm.js,tw.css}; grep -c 'https://' dist/web/index.html = 0; node dist/cli.js --help exit 0.",
       "acceptanceCriteria": [
         "npm run build succeeds",
         "npm pack --dry-run lists dist/, .claude-plugin/, smithery.yaml, README.md, LICENSE",

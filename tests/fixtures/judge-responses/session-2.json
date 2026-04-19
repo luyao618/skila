@@ -1,0 +1,7 @@
+{
+  "decision": "UPDATE",
+  "target_name": "azure-pipeline-debug",
+  "similarity": 0.85,
+  "justification": "Refines heuristic in azure-pipeline-debug; tool sequence shows pipeline log inspection followed by yaml edit",
+  "suggested_version_bump": "minor"
+}

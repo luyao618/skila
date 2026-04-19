@@ -58,6 +58,12 @@
       "type": "file"
     },
     {
+      "path": "src/cli.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776576820180,
+      "type": "file"
+    },
+    {
       "path": "skills/skila/references/quality-bar.md",
       "accessCount": 3,
       "lastAccessed": 1776530062214,
@@ -73,6 +79,18 @@
       "path": "skills/skila/scripts/validate_skill.py",
       "accessCount": 3,
       "lastAccessed": 1776530267590,
+      "type": "file"
+    },
+    {
+      "path": "src/hooks/feedback.cjs",
+      "accessCount": 3,
+      "lastAccessed": 1776576590204,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 3,
+      "lastAccessed": 1776576740723,
       "type": "file"
     },
     {
@@ -274,12 +292,6 @@
       "type": "directory"
     },
     {
-      "path": "package.json",
-      "accessCount": 1,
-      "lastAccessed": 1776576014437,
-      "type": "file"
-    },
-    {
       "path": "tsconfig.json",
       "accessCount": 1,
       "lastAccessed": 1776576014569,
@@ -292,27 +304,33 @@
       "type": "file"
     },
     {
-      "path": "src/cli.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776576015077,
-      "type": "file"
-    },
-    {
       "path": "src/web/index.html",
       "accessCount": 1,
       "lastAccessed": 1776576015206,
       "type": "file"
     },
     {
-      "path": "src/hooks/feedback.cjs",
-      "accessCount": 1,
-      "lastAccessed": 1776576015328,
-      "type": "file"
-    },
-    {
       "path": "LICENSE",
       "accessCount": 1,
       "lastAccessed": 1776576020712,
+      "type": "file"
+    },
+    {
+      "path": "src/types.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776576340626,
+      "type": "file"
+    },
+    {
+      "path": "src/config/config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776576340761,
+      "type": "file"
+    },
+    {
+      "path": "src/storage/atomic.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776576340891,
       "type": "file"
     }
   ],

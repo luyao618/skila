@@ -1,0 +1,4 @@
+[
+  {"tool": "Bash", "args": {"command": "terraform state list"}},
+  {"tool": "Edit", "args": {"file_path": "main.tf"}}
+]

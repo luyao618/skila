@@ -1,0 +1,7 @@
+{
+  "decision": "NEW",
+  "target_name": null,
+  "similarity": 0.05,
+  "justification": "Docker volume mounting unrelated to azure pipeline debug",
+  "suggested_version_bump": "minor"
+}

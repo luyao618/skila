@@ -1,0 +1,7 @@
+{
+  "decision": "NEW",
+  "target_name": null,
+  "similarity": 0.72,
+  "justification": "Strong methodological similarity but different infra domain (terraform vs azure pipelines)",
+  "suggested_version_bump": "minor"
+}

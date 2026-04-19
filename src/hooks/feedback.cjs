@@ -1,49 +1,42 @@
 #!/usr/bin/env node
 // skila feedback hook bridge (CommonJS for plugin.json compatibility).
-// Phase 1: no-op; reads stdin (Claude Code hook input JSON), discards it,
-// exits 0 within ~100ms. Real implementation lands in Phase 2:
-//   - parses {event, tool, result, session} from stdin
-//   - resolves dist/cli.js via path.resolve(__dirname, '..', 'cli.js')
-//   - delegates to collectFeedback(...) under withLock(feedback.json)
+// Phase 2: parses {event, tool, result, session?, skill?} from stdin,
+// calls collectFeedback() via the dist/cli.js bridge, exits ≤1s.
 
 "use strict";
 
 const path = require("path");
 
-// Resolve the sibling CLI bundle path (used in phase 2 to delegate work).
-// Computed eagerly so any path-resolution error surfaces in logs immediately.
 const CLI_PATH = path.resolve(__dirname, "..", "cli.js");
-void CLI_PATH;
 
-const HARD_BUDGET_MS = 100;
-const watchdog = setTimeout(() => {
-  // Belt-and-suspenders: ensure we never hold the hook channel open past budget.
-  process.exit(0);
-}, HARD_BUDGET_MS);
+// Hard time budget. Per AC9 the budget is ≤1000ms end-to-end.
+const HARD_BUDGET_MS = 1000;
+const watchdog = setTimeout(() => process.exit(0), HARD_BUDGET_MS);
 watchdog.unref();
 
-// Drain stdin without doing any work (Phase 1 stub). Resolves promptly even
-// when no payload is piped (e.g. test invocation).
 let buf = "";
 process.stdin.setEncoding("utf8");
-process.stdin.on("data", (chunk) => {
-  buf += chunk;
-  if (buf.length > 1024 * 64) {
-    // Cap buffered payload to keep memory bounded; surplus bytes are ignored.
-    buf = buf.slice(0, 1024 * 64);
-  }
-});
-process.stdin.on("end", () => {
-  clearTimeout(watchdog);
-  process.exit(0);
-});
-process.stdin.on("error", () => {
-  clearTimeout(watchdog);
-  process.exit(0);
-});
 
-// If stdin is a TTY (no pipe attached), exit immediately.
-if (process.stdin.isTTY) {
+function finalize() {
   clearTimeout(watchdog);
-  process.exit(0);
+  let payload = {};
+  try { payload = buf.trim() ? JSON.parse(buf) : {}; } catch { /* ignore */ }
+  // Dynamic import the ESM bridge.
+  import(require("url").pathToFileURL(CLI_PATH).href)
+    .then((mod) => {
+      try { mod.collectFeedback(payload); } catch { /* swallow */ }
+      process.exit(0);
+    })
+    .catch(() => process.exit(0));
+}
+
+if (process.stdin.isTTY) {
+  finalize();
+} else {
+  process.stdin.on("data", (chunk) => {
+    buf += chunk;
+    if (buf.length > 1024 * 64) buf = buf.slice(0, 1024 * 64);
+  });
+  process.stdin.on("end", finalize);
+  process.stdin.on("error", finalize);
 }

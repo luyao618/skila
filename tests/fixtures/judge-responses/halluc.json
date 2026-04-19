@@ -1,0 +1,7 @@
+{
+  "decision": "UPDATE",
+  "target_name": "does-not-exist",
+  "similarity": 0.9,
+  "justification": "Hallucinated target",
+  "suggested_version_bump": "minor"
+}

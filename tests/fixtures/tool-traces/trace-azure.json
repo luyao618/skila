@@ -1,0 +1,8 @@
+[
+  {"tool": "Edit", "args": {"file_path": "azure-pipelines.yml"}},
+  {"tool": "Bash", "args": {"command": "az pipelines runs list"}},
+  {"tool": "Grep", "args": {"pattern": "task_failed"}},
+  {"tool": "Read", "args": {"file_path": "azure-pipelines.yml"}},
+  {"tool": "Edit", "args": {"file_path": "azure-pipelines.yml"}},
+  {"tool": "Bash", "args": {"command": "az pipelines run --pipeline-id 42"}}
+]
