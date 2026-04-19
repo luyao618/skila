@@ -1,0 +1,89 @@
+# Proposal Row Templates
+
+Exact row format variants for the AskUserQuestion multi-select UI.
+Use these templates verbatim — do not improvise the format.
+
+---
+
+## Row Format Variants
+
+### New skill — global scope
+
+```
+[NEW@global]     {{NAME}}     {{ONE_LINE_REASON}}
+```
+
+Example:
+```
+[NEW@global]     ts-monorepo-scaffold     Multi-step repo bootstrap (criterion 1)
+```
+
+### New skill — local scope
+
+```
+[NEW@local]      {{NAME}}     {{ONE_LINE_REASON}}
+```
+
+Example:
+```
+[NEW@local]      deploy-staging     Repo-specific deploy pipeline (criterion 2)
+```
+
+### Update existing skill — published
+
+```
+[UPDATE→{{TARGET}}]     {{TARGET}}     {{ONE_LINE_REASON}}
+```
+
+Example:
+```
+[UPDATE→skila]     skila     Added staging tier docs (criterion 1, minor bump)
+```
+
+### Update existing skill — staging tier
+
+```
+[UPDATE→{{TARGET}}@staging]     {{TARGET}}     {{ONE_LINE_REASON}} (currently in staging)
+```
+
+Example:
+```
+[UPDATE→my-workflow@staging]     my-workflow     Fix lint step (patch bump, in staging)
+```
+
+### Row with lint warning
+
+Append `(WARN: <reason>)` inline:
+
+```
+[NEW@global]     {{NAME}}     {{ONE_LINE_REASON}} (WARN: description <40 chars)
+```
+
+---
+
+## Wave-1 Overflow Row
+
+When > 8 candidates pass the criteria, collapse excess into:
+
+```
+[+{{N}} more low-confidence candidates omitted]
+```
+
+Example:
+```
+[+3 more low-confidence candidates omitted]
+```
+
+---
+
+## Full Example Multi-Select Block
+
+```
+Select skills to create or update (space to toggle, enter to confirm):
+
+ ✓ [NEW@global]           ts-build-pipeline        Full build+test+lint sequence (criterion 1)
+ ✓ [NEW@local]            deploy-prod              Repo-specific prod deploy (criterion 2)
+   [UPDATE→skila]         skila                    Add feedback section (criterion 1, minor)
+   [NEW@global]           pr-checklist             User stated preference for PR format (criterion 3)
+   [+2 more low-confidence candidates omitted]
+```
