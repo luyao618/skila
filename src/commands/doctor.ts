@@ -17,7 +17,6 @@ import { promisify } from "node:util";
 import { createServer } from "node:http";
 import { ensureSkilaHome, statusDir, skillsRoot } from "../config/config.js";
 import { sentinelPath, getAdapter, resetAdapterCacheForTests } from "../storage/index.js";
-import { atomicWriteFileSync } from "../storage/atomic.js";
 import { GitBackedStorage } from "../storage/git.js";
 import { FlatFileStorage } from "../storage/flat.js";
 
@@ -298,6 +297,3 @@ export async function runSelftest(): Promise<{ ok: boolean; detail: string }> {
     return { ok: false, detail: (err as Error).message };
   }
 }
-
-// Suppress unused (kept for API surface).
-void atomicWriteFileSync;
