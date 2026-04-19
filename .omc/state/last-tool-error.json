@@ -1,7 +1,0 @@
-{
-  "tool_name": "Read",
-  "tool_input_preview": "{\"file_path\":\"/Users/yao/work/code/personal/skila/scripts/validate_skill.py\"}",
-  "error": "File does not exist. Note: your current working directory is /Users/yao/work/code/personal/skila.",
-  "timestamp": "2026-04-18T16:34:27.477Z",
-  "retry_count": 1
-}

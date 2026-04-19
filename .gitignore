@@ -1,0 +1,15 @@
+.DS_Store
+**/.DS_Store
+node_modules/
+dist/
+*.log
+.omc/state/sessions/
+.omc/state/checkpoints/
+.omc/state/agent-replay-*.jsonl
+.omc/state/last-tool-error.json
+.omc/state/ralph-state.json
+.omc/state/ralplan-state.json
+.omc/state/subagent-tracking.json
+.omc/state/sessions/**/ralph-state.json
+.omc/state/sessions/**/ultrawork-state.json
+.omc/sessions/
