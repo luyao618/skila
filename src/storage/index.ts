@@ -79,6 +79,16 @@ export async function getAdapter(): Promise<StorageAdapter> {
     return cached;
   }
 
+  // SKILA_FORCE_ADAPTER=flat bypasses git probe (test isolation + no-git environments).
+  if (process.env.SKILA_FORCE_ADAPTER === "flat") {
+    const a = new FlatFileStorage();
+    await a.init();
+    cached = a;
+    writeSentinel(home, "flat");
+    logSelection(cached.mode);
+    return cached;
+  }
+
   // No sentinel — first run. Probe.
   const gitOk = await isGitAvailable();
   let writable = true;

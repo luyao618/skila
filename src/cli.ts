@@ -92,7 +92,7 @@ async function dispatch(argv: string[]): Promise<number> {
     }
     case "inspect": {
       const { runInspect } = await import("./commands/inspect.js");
-      const out = runInspect(positionals[0], values["version"] as string | undefined);
+      const out = await runInspect(positionals[0], values["version"] as string | undefined);
       process.stdout.write(out.content);
       return 0;
     }

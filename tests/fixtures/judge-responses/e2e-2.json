@@ -1,0 +1,7 @@
+{
+  "decision": "UPDATE",
+  "target_name": "azure-pipeline-debug",
+  "similarity": 0.85,
+  "justification": "Refines heuristic in azure-pipeline-debug; transient-vs-deterministic classification",
+  "suggested_version_bump": "minor"
+}

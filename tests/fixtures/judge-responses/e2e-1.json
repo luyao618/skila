@@ -1,0 +1,7 @@
+{
+  "decision": "NEW",
+  "target_name": null,
+  "similarity": 0.05,
+  "justification": "Initial azure-pipeline-debug skill from e2e session 1",
+  "suggested_version_bump": "minor"
+}

@@ -3,14 +3,25 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { findSkill } from "../inventory/scanner.js";
 import { ensureSkilaHome } from "../config/config.js";
+import { getAdapter } from "../storage/index.js";
 
-export function runInspect(name: string, version?: string): { path: string; content: string } {
+export async function runInspect(name: string, version?: string): Promise<{ path: string; content: string }> {
   if (version) {
+    const ver = version.startsWith("v") ? version.slice(1) : version;
+    const v = `v${ver}`;
+    // Try legacy versions tree first.
     const home = ensureSkilaHome();
-    const v = version.startsWith("v") ? version : `v${version}`;
     const file = join(home, "versions", name, v, "SKILL.md");
-    if (!existsSync(file)) throw new Error(`inspect: version not found: ${name}@${v}`);
-    return { path: file, content: readFileSync(file, "utf8") };
+    if (existsSync(file)) {
+      return { path: file, content: readFileSync(file, "utf8") };
+    }
+    // Fall back to storage adapter (git log search or flat snapshot).
+    try {
+      const adapter = await getAdapter();
+      const content = await adapter.getVersion(name, ver);
+      return { path: `adapter:${name}@${v}`, content };
+    } catch { /* fall through */ }
+    throw new Error(`inspect: version not found: ${name}@${v}`);
   }
   const skill = findSkill(name);
   if (!skill) throw new Error(`inspect: skill not found: ${name}`);
