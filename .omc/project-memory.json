@@ -40,6 +40,12 @@
       "type": "directory"
     },
     {
+      "path": "src/cli.ts",
+      "accessCount": 8,
+      "lastAccessed": 1776578097174,
+      "type": "file"
+    },
+    {
       "path": "skills/skila/SKILL.md",
       "accessCount": 6,
       "lastAccessed": 1776530255507,
@@ -52,15 +58,21 @@
       "type": "file"
     },
     {
+      "path": "src/storage/atomic.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776578162475,
+      "type": "file"
+    },
+    {
       "path": ".claude-plugin/plugin.json",
       "accessCount": 4,
       "lastAccessed": 1776576014694,
       "type": "file"
     },
     {
-      "path": "src/cli.ts",
+      "path": "package.json",
       "accessCount": 4,
-      "lastAccessed": 1776576820180,
+      "lastAccessed": 1776576967145,
       "type": "file"
     },
     {
@@ -88,9 +100,15 @@
       "type": "file"
     },
     {
-      "path": "package.json",
+      "path": "",
       "accessCount": 3,
-      "lastAccessed": 1776576740723,
+      "lastAccessed": 1776577025572,
+      "type": "directory"
+    },
+    {
+      "path": "src/config/config.ts",
+      "accessCount": 3,
+      "lastAccessed": 1776578097122,
       "type": "file"
     },
     {
@@ -130,12 +148,6 @@
       "type": "file"
     },
     {
-      "path": "",
-      "accessCount": 2,
-      "lastAccessed": 1776530339896,
-      "type": "directory"
-    },
-    {
       "path": "docs/research/learner-deep-study.md",
       "accessCount": 2,
       "lastAccessed": 1776531447276,
@@ -145,6 +157,18 @@
       "path": "progress.txt",
       "accessCount": 2,
       "lastAccessed": 1776575830023,
+      "type": "file"
+    },
+    {
+      "path": "src/types.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776576967041,
+      "type": "file"
+    },
+    {
+      "path": "tsconfig.json",
+      "accessCount": 2,
+      "lastAccessed": 1776576994426,
       "type": "file"
     },
     {
@@ -292,12 +316,6 @@
       "type": "directory"
     },
     {
-      "path": "tsconfig.json",
-      "accessCount": 1,
-      "lastAccessed": 1776576014569,
-      "type": "file"
-    },
-    {
       "path": "smithery.yaml",
       "accessCount": 1,
       "lastAccessed": 1776576014826,
@@ -313,24 +331,6 @@
       "path": "LICENSE",
       "accessCount": 1,
       "lastAccessed": 1776576020712,
-      "type": "file"
-    },
-    {
-      "path": "src/types.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776576340626,
-      "type": "file"
-    },
-    {
-      "path": "src/config/config.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776576340761,
-      "type": "file"
-    },
-    {
-      "path": "src/storage/atomic.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776576340891,
       "type": "file"
     }
   ],

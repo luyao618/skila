@@ -26,7 +26,9 @@ async function dispatch(argv: string[]): Promise<number> {
         "outcome": { type: "string" },
         "to": { type: "string" },
         "version": { type: "string" },
-        "status": { type: "string" }
+        "status": { type: "string" },
+        "fix-storage": { type: "boolean" },
+        "yes": { type: "boolean" }
       }
     });
   } catch (err) {
@@ -106,11 +108,31 @@ async function dispatch(argv: string[]): Promise<number> {
       return 0;
     }
     case "serve":
-    case "doctor":
     case "stats":
-    case "selftest":
       process.stdout.write(`skila ${cmd}: not yet implemented (Phase 3+)\n`);
       return 0;
+    case "doctor": {
+      if (positionals[0] === "storage" || values["fix-storage"] !== undefined) {
+        const { runFixStorage } = await import("./commands/doctor.js");
+        const yes = values["yes"] === true || values["yes"] === "true";
+        const r = await runFixStorage({ yes });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        return 0;
+      }
+      const { runDoctor } = await import("./commands/doctor.js");
+      const report = await runDoctor();
+      process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+      return report.ok ? 0 : 1;
+    }
+    case "selftest": {
+      const { runSelftest } = await import("./commands/doctor.js");
+      const r = await runSelftest();
+      process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      return r.ok ? 0 : 1;
+    }
+    case "storage":
+      process.stderr.write(`skila: unknown command 'storage' (use 'skila doctor --fix-storage' to reconcile storage)\n`);
+      return 64;
     default:
       process.stderr.write(`skila: unknown command '${cmd}'\n`);
       return 64;

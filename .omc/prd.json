@@ -94,7 +94,8 @@
       "id": "AC8",
       "phase": 2,
       "title": "Append-and-revise: UPDATE→X with parentVersion + non-empty changelog",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 3806f58. tests/e2e/test_revise_path.ts green: UPDATE→azure-pipeline-debug, parentVersion=0.1.0, newVersion=0.2.0, changelog references session-2.",
       "acceptanceCriteria": [
         "tests/e2e/test_revise_path.ts passes",
         "Given existing published skill X, /skila offers [UPDATE→X v0.1.0→v0.2.0] row",
@@ -105,7 +106,8 @@
       "id": "AC9",
       "phase": 2,
       "title": "Feedback flywheel: Stop hook updates feedback.json within 1s (mocked-clock)",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 3806f58. tests/e2e/test_feedback_loop.ts green: mtime delta ≤1000ms; burst 50 fires <100ms → queueDepth ≤10.",
       "acceptanceCriteria": [
         "tests/e2e/test_feedback_loop.ts uses vi.useFakeTimers()",
         "Hook→feedback.json mtime delta ≤ 1000ms asserted deterministically",
@@ -116,7 +118,8 @@
       "id": "AC10",
       "phase": 2,
       "title": "Two-tier promotion: drafts→.draft-skila/, auto-promote→.staging-skila/, explicit graduate→published",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 3806f58. tests/e2e/test_promotion_gate.ts green: distill→draft, auto→staging, graduate→published, reject→archived.",
       "acceptanceCriteria": [
         "tests/e2e/test_promotion_gate.ts passes",
         "Distill output lands in .draft-skila/ (loader-invisible)",
@@ -129,7 +132,8 @@
       "id": "AC11",
       "phase": 2,
       "title": "Semantic similarity via LLM judge with three-input prompt + output shape + classification + hallucination guard",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 3806f58. tests/judge/{test_judge_prompt,test_judge_output_shape,test_judge_decision_classification,test_judge_hallucination_guard}.ts all green.",
       "acceptanceCriteria": [
         "src/judge/prompt.ts builds prompt with 3 inputs: inventory, candidate, last-30 tool trace",
         "tests/judge/test_judge_prompt.ts asserts all 3 inputs present in prompt",
@@ -142,7 +146,8 @@
       "id": "AC12",
       "phase": 2,
       "title": "Tool-trace-aware extraction: judge prompt cites tool sequence + e2e on 3 fixture sessions",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 3806f58. tests/judge/test_extraction_uses_tool_trace.ts green on 3 fixture sessions.",
       "acceptanceCriteria": [
         "tests/judge/test_extraction_uses_tool_trace.ts passes",
         "Judge prompt distillation section explicitly references 'tool sequence' as input",
@@ -322,7 +327,8 @@
       "id": "D5",
       "phase": 2,
       "title": "Smithery mcp mode storage isolation (ephemeral tmpdir; read-only; orphan cleanup)",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 3806f58. tests/mcp/test_smithery_isolation.ts green: child SKILA_HOME under /tmp/skila-smithery-<pid>/; real home mtime unchanged; mutation commands disabled; orphan >1h pruned.",
       "acceptanceCriteria": [
         "tests/mcp/test_smithery_isolation.ts passes",
         "Spawning `node dist/cli.js mcp` sets SKILA_HOME to /tmp/skila-smithery-<pid>/ in child env",

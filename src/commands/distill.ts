@@ -93,7 +93,7 @@ export async function runDistill(opts: DistillOptions): Promise<DistillResult> {
   appendChangelog(fm, proposal.newVersion, proposal.changelogEntry);
 
   const draftDir = join(statusDir("draft"), proposal.name);
-  const file = writeSkillFile(draftDir, fm, proposal.body || `# ${proposal.name}\n\n${proposal.description}\n`);
+  const file = await writeSkillFile(draftDir, fm, proposal.body || `# ${proposal.name}\n\n${proposal.description}\n`);
   // Validate after write
   validateSkillContent(readFileSync(file, "utf8"), { expectedDirName: proposal.name });
 
