@@ -247,7 +247,8 @@
       "id": "AC19",
       "phase": 4,
       "title": "GitBackedStorage via child_process.execFile (no simple-git dep)",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 285bb77. src/storage/git.ts uses execFile only; no simple-git/nodegit imports. tests/storage/test_adapter_selection.ts (git mode) green.",
       "acceptanceCriteria": [
         "src/storage/git.ts implements init/commit/listVersions/getVersion/diff",
         "Uses child_process.execFile('git', ...) — no simple-git import anywhere in src/",
@@ -258,7 +259,8 @@
       "id": "AC20",
       "phase": 4,
       "title": "FlatFileStorage with identical interface; versions/<name>/v0.X.Y/SKILL.md layout",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 285bb77. src/storage/flat.ts implements StorageAdapter; versions/<name>/v0.X.Y/{SKILL.md,.meta.json}. test_adapter_selection.ts (flat mode) green.",
       "acceptanceCriteria": [
         "src/storage/flat.ts implements same interface as git.ts",
         "Files written to ~/.claude/skila-data/versions/<name>/v0.X.Y/SKILL.md",
@@ -269,7 +271,8 @@
       "id": "AC21",
       "phase": 4,
       "title": "Factory selects adapter via git --version once; logs once; never re-warns; no top-level skila storage migrate",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 285bb77. Factory module-level logged flag; double-boot test green; `node dist/cli.js storage migrate` → 'unknown command'; no-silent-switch test green via .adapter-mode sentinel.",
       "acceptanceCriteria": [
         "Factory checks git --version at startup; selects adapter; logs selection ONCE",
         "Double-boot produces 1 log line, no warning, no re-selection",
@@ -282,7 +285,8 @@
       "id": "AC22",
       "phase": 4,
       "title": "All storage writes atomic via temp + fs.rename; kill -9 mid-write leaves old or new only",
-      "passes": false,
+      "passes": true,
+      "evidence": "Commit 285bb77. tests/storage/test_atomic_writes.ts: 5/5 SIGKILL trials bytes-clean; EXDEV cross-device copy+unlink fallback covered.",
       "acceptanceCriteria": [
         "tests/storage/test_atomic_writes.ts passes",
         "kill -9 mid-write fork test: file is bytes-equal old OR new, never partial"

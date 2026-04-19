@@ -34,16 +34,16 @@
   "directoryMap": {},
   "hotPaths": [
     {
+      "path": "src/cli.ts",
+      "accessCount": 10,
+      "lastAccessed": 1776578550650,
+      "type": "file"
+    },
+    {
       "path": "docs/research/hermes-and-memex-study.md",
       "accessCount": 8,
       "lastAccessed": 1776575496097,
       "type": "directory"
-    },
-    {
-      "path": "src/cli.ts",
-      "accessCount": 8,
-      "lastAccessed": 1776578097174,
-      "type": "file"
     },
     {
       "path": "skills/skila/SKILL.md",
@@ -169,6 +169,12 @@
       "path": "tsconfig.json",
       "accessCount": 2,
       "lastAccessed": 1776576994426,
+      "type": "file"
+    },
+    {
+      "path": "src/web/index.html",
+      "accessCount": 2,
+      "lastAccessed": 1776578691719,
       "type": "file"
     },
     {
@@ -319,12 +325,6 @@
       "path": "smithery.yaml",
       "accessCount": 1,
       "lastAccessed": 1776576014826,
-      "type": "file"
-    },
-    {
-      "path": "src/web/index.html",
-      "accessCount": 1,
-      "lastAccessed": 1776576015206,
       "type": "file"
     },
     {

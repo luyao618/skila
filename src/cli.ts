@@ -107,9 +107,14 @@ async function dispatch(argv: string[]): Promise<number> {
       await runMcpServer();
       return 0;
     }
-    case "serve":
+    case "serve": {
+      const { runServe } = await import("./commands/serve.js");
+      const portArg = values["port"] ? parseInt(values["port"] as string, 10) : undefined;
+      await runServe({ port: portArg });
+      return 0; // unreachable
+    }
     case "stats":
-      process.stdout.write(`skila ${cmd}: not yet implemented (Phase 3+)\n`);
+      process.stdout.write(`skila stats: not yet implemented (Phase 3+)\n`);
       return 0;
     case "doctor": {
       if (positionals[0] === "storage" || values["fix-storage"] !== undefined) {
