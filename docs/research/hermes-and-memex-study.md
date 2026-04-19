@@ -254,6 +254,32 @@ Rationale (linking back to plan §2): Option A (pure-skill markdown only) cannot
 
 _Future deviations from this plan are appended here per R-DOC-3._
 
+### Decision Update — v2 (2026-04-19)
+
+> **Context**: v1 (Python + pure-skill markdown) was rejected by the user as a "糊弄 demo". v2 spec lives at `.omc/specs/deep-interview-skila-v2.md` and v2 plan at `.omc/plans/skila-v2-implementation-plan.md`. **Design north star**: `docs/research/learner-deep-study.md` — every v2 superiority dimension maps to a documented learner gap.
+>
+> **Superiority-dim → AC mapping** (per spec AC2; reconciled to plan ordering AC8–AC12):
+> 1. Append-and-revise (learner gap §7.1) → **AC8**
+> 2. Feedback flywheel (learner gap §7.2) → **AC9**
+> 3. Two-tier draft/staging/published promotion (learner gap §5) → **AC10**
+> 4. Semantic similarity via LLM judge (learner gap §4) → **AC11**
+> 5. Tool-trace-aware extraction (learner gap §3) → **AC12**
+
+| # | Insight | Source (file:line) | v2 decision | Why |
+|---|---|---|---|---|
+| v2-1 | **TypeScript substrate** (replaces v1 Python) | memex `/Users/yao/work/code/awesome-project/memex/.claude-plugin/plugin.json:1-12`, `src/lib/store.ts:127-138` (atomic write idiom); v1 substrate retired per spec L52 (`.omc/specs/deep-interview-skila-v2.md:52`) | **DIVERGE from v1, BORROW from memex** | TS+npm+plugin+smithery is the proven CC-plugin distribution path; spec mandates "no Python in the runtime path" (spec L61). v1's `validate_skill.py`/`lint_skill.py`/`scan_inventory.py` reimplemented as TS modules under `src/validate/`, `src/inventory/`. |
+| v2-2 | **Web control panel** as primary surface (replaces v1 prose-only) | memex `src/commands/serve.ts` (memex's serve is read-only viewer); spec L112-138 (`.omc/specs/deep-interview-skila-v2.md:112-138`) | **DIVERGE from memex** — full read+write+CodeMirror 6 editor | Spec L233 user direct quote: "我希望我们生成 skill 分 draft publish 之类的, 还有 update skill, 我们的 web 都可以管理起来". Memex's serve cannot edit; skila's web is the *primary* management surface. AC13–AC18 codify this. AC18 visual ≥7/10 + AC18b LCP ≤500ms gate the quality. |
+| v2-3 | **npm distribution** as `@yao/skila` (was claude-plugin-only) | memex `package.json` (npm-published `memex`); spec L140-145 (`.omc/specs/deep-interview-skila-v2.md:140-145`) | **BORROW from memex** — three channels: npm + Claude plugin marketplace + Smithery | Spec L238: "@yao/skila" scope verified available, claimed. `npm pack --dry-run` is AC7. Smithery's ephemeral nature mandates D5 isolation (`/tmp/skila-smithery-<pid>/`) — Smithery `mcp` mode must NEVER touch user's real `~/.claude/skila-data/` (plan §2.3 D5). |
+| v2-4 | **Feedback hooks** PostToolUse + Stop (was none) | memex `hooks/hooks.json:14-24` (Stop hook for retro reminder); spec L186, L66-67 | **DIVERGE from memex semantics, BORROW from memex mechanism** | Memex's Stop hook *prompts the agent to invoke a skill*; skila's PostToolUse + Stop hooks *only collect feedback signals* into `~/.claude/skila-data/feedback.json` — never trigger skill creation (spec L67, R3 still holds: skill creation is only via user-typed `/skila`). CJS bridge at `dist/hooks/feedback.cjs`. Concurrent-write safety via `withLock` (plan D6). |
+| v2-5 | **Build-time vendored web assets** (no CDN) | spec L59 forbids React/Vue/Vite but is silent on vendor bundling; plan §2.3 D1 (`.omc/plans/skila-v2-implementation-plan.md`); Tailwind docs note CDN is dev-only anti-pattern | **DIVERGE from spec L59 literal interpretation** — `scripts/postbuild.mjs` runs esbuild + tailwindcss CLI once into `dist/web/vendor/cm.js` + `tw.css` | Iter-1 chose CDN; both Architect (REVISE-REQUIRED) and Critic (REJECT) flagged: CDN ↔ AC18 visual gate + AC18b LCP ≤500ms physically conflict; offline + deterministic + reproducible requires local vendor. Spec L62 ("src→dist via tsc") constrains *application* code, not vendor asset bundling — esbuild + tailwindcss are dev-time tools producing static `dist/web/vendor/` outputs shipped via `npm pack`. New AC18b: cold LCP ≤500ms / warm ≤200ms — trivially achieved by local vendor. Risk class "CDN drift" deleted from plan §7. |
+| v2-6 | **Staging-tier auto-promotion** (resolves "auto-on pollutes library" vs "auto-off kills flywheel" dilemma) | spec L193 (auto-promote `usageCount≥3 ∧ successRate≥0.7`); learner-deep-study §5 (learner has no gating); plan §3 Pre-mortem Scenario B (`.omc/plans/skila-v2-implementation-plan.md`) | **DIVERGE from both naive options** — auto-promotion fires by default but destination is `~/.claude/skills/.staging-skila/<name>/` (loader-invisible because `.`-prefixed); only explicit user `graduate` (web button or CLI) reaches published | Iter-1 picked "auto-off" → reviewers correctly flagged as goal-incoherent (kills the entire learning hypothesis). Iter-2 fix: flywheel turns automatically (signal accumulates in staging), library curation stays manual. Floor: ≥10 invocations OR ≥1 failure observation before staging promotion fires (prevents trivial 3/3 rubber-stamps). New endpoints `POST /api/skills/:name/graduate` + `/reject`; new AC18c covers UI surfacing. Status enum extended to 5 values: `draft | staging | published | archived | disabled` (spec L90 patch applied in this commit). |
+
+**Spec patches applied in this same commit** (per plan §1 AC2bis, R-DOC-3 says deviations land as Decision Updates rather than silent edits):
+1. `.omc/specs/deep-interview-skila-v2.md:90` — status enum extended from 4 → 5 values (adds `staging`).
+2. `.omc/specs/deep-interview-skila-v2.md:181` — superiority-dim AC reference renumbered `AC10–AC14` → `AC8–AC12` to match plan ordering.
+3. `.omc/specs/deep-interview-skila-v2.md:213-220` — evolution-path step list expanded from 8 → 10 steps to match `tests/e2e/test_evolution_path.ts` (adds auto-stage → graduate steps; covers explicit graduate via web API).
+
+
 ---
 
 ## 7. Trace Matrix
