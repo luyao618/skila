@@ -35,20 +35,26 @@
   "hotPaths": [
     {
       "path": "docs/research/hermes-and-memex-study.md",
-      "accessCount": 5,
-      "lastAccessed": 1776530160853,
+      "accessCount": 8,
+      "lastAccessed": 1776575496097,
       "type": "directory"
     },
     {
       "path": "skills/skila/SKILL.md",
-      "accessCount": 4,
-      "lastAccessed": 1776530062321,
+      "accessCount": 6,
+      "lastAccessed": 1776530255507,
       "type": "file"
     },
     {
       "path": "README.md",
+      "accessCount": 6,
+      "lastAccessed": 1776576038257,
+      "type": "file"
+    },
+    {
+      "path": ".claude-plugin/plugin.json",
       "accessCount": 4,
-      "lastAccessed": 1776530118615,
+      "lastAccessed": 1776576014694,
       "type": "file"
     },
     {
@@ -61,6 +67,12 @@
       "path": "skills/skila/references/proposal-criteria.md",
       "accessCount": 3,
       "lastAccessed": 1776530062268,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/scripts/validate_skill.py",
+      "accessCount": 3,
+      "lastAccessed": 1776530267590,
       "type": "file"
     },
     {
@@ -82,18 +94,6 @@
       "type": "file"
     },
     {
-      "path": ".claude-plugin/plugin.json",
-      "accessCount": 2,
-      "lastAccessed": 1776530067486,
-      "type": "file"
-    },
-    {
-      "path": "skills/skila/scripts/validate_skill.py",
-      "accessCount": 2,
-      "lastAccessed": 1776530072008,
-      "type": "file"
-    },
-    {
       "path": "skills/skila/scripts/lint_skill.py",
       "accessCount": 2,
       "lastAccessed": 1776530072061,
@@ -106,9 +106,27 @@
       "type": "file"
     },
     {
+      "path": "tests/bin/skila_dryrun.py",
+      "accessCount": 2,
+      "lastAccessed": 1776530267533,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 2,
+      "lastAccessed": 1776530339896,
+      "type": "directory"
+    },
+    {
+      "path": "docs/research/learner-deep-study.md",
+      "accessCount": 2,
+      "lastAccessed": 1776531447276,
+      "type": "file"
+    },
+    {
       "path": "progress.txt",
-      "accessCount": 1,
-      "lastAccessed": 1776529191201,
+      "accessCount": 2,
+      "lastAccessed": 1776575830023,
       "type": "file"
     },
     {
@@ -184,12 +202,6 @@
       "type": "file"
     },
     {
-      "path": "tests/bin/skila_dryrun.py",
-      "accessCount": 1,
-      "lastAccessed": 1776529910328,
-      "type": "file"
-    },
-    {
       "path": "tests/fixtures/expected/wave1.json",
       "accessCount": 1,
       "lastAccessed": 1776529919078,
@@ -253,6 +265,54 @@
       "path": "tests/run_all.sh",
       "accessCount": 1,
       "lastAccessed": 1776529977920,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/scripts",
+      "accessCount": 1,
+      "lastAccessed": 1776530267551,
+      "type": "directory"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 1,
+      "lastAccessed": 1776576014437,
+      "type": "file"
+    },
+    {
+      "path": "tsconfig.json",
+      "accessCount": 1,
+      "lastAccessed": 1776576014569,
+      "type": "file"
+    },
+    {
+      "path": "smithery.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1776576014826,
+      "type": "file"
+    },
+    {
+      "path": "src/cli.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776576015077,
+      "type": "file"
+    },
+    {
+      "path": "src/web/index.html",
+      "accessCount": 1,
+      "lastAccessed": 1776576015206,
+      "type": "file"
+    },
+    {
+      "path": "src/hooks/feedback.cjs",
+      "accessCount": 1,
+      "lastAccessed": 1776576015328,
+      "type": "file"
+    },
+    {
+      "path": "LICENSE",
+      "accessCount": 1,
+      "lastAccessed": 1776576020712,
       "type": "file"
     }
   ],

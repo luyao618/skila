@@ -1,0 +1,331 @@
+{
+  "project": "skila v2",
+  "spec": ".omc/specs/deep-interview-skila-v2.md",
+  "plan": ".omc/plans/skila-v2-implementation-plan.md",
+  "phase0_commits": ["4ebc952", "381aa1c"],
+  "stories": [
+    {
+      "id": "AC1",
+      "phase": 0,
+      "title": "Decision Update — v2 in hermes-and-memex-study.md",
+      "passes": true,
+      "evidence": "Commit 381aa1c; grep 'Decision Update — v2' hermes-and-memex-study.md = 1; 6 borrow/diverge entries with source-line anchors.",
+      "acceptanceCriteria": [
+        "docs/research/hermes-and-memex-study.md contains a 'Decision Update — v2' section",
+        "Section has 6 borrow/diverge entries (TS substrate, web panel, npm distribution, feedback hooks, build-time vendor, staging-tier auto-promotion)",
+        "Each entry has source-file:line anchors"
+      ]
+    },
+    {
+      "id": "AC2",
+      "phase": 0,
+      "title": "learner-deep-study.md cited as design north star",
+      "passes": true,
+      "evidence": "Commit 381aa1c; Decision Update v2 cites learner-deep-study.md and explicitly maps 5 superiority dims to AC8–AC12.",
+      "acceptanceCriteria": [
+        "Decision Update — v2 references docs/research/learner-deep-study.md as design north star",
+        "5 superiority dimensions explicitly mapped to AC8–AC12 (append-and-revise, feedback flywheel, two-tier promotion, semantic similarity, tool-trace-aware extraction)"
+      ]
+    },
+    {
+      "id": "AC3",
+      "phase": 0,
+      "title": "Research/spec commits land before any src/dist/.claude-plugin/web file",
+      "passes": true,
+      "evidence": "git log shows commits 4ebc952 (v1 cleanup) and 381aa1c (Decision Update v2) on main; no src/, dist/, .claude-plugin/, web/ files exist yet.",
+      "acceptanceCriteria": [
+        "git log --diff-filter=A --name-only --reverse shows research/spec commits before any src/, dist/, .claude-plugin/, or web/ file"
+      ]
+    },
+    {
+      "id": "AC4",
+      "phase": 1,
+      "title": "package.json declares @yao/skila with bin/engines/version + esbuild+tailwindcss devDeps",
+      "passes": false,
+      "acceptanceCriteria": [
+        "package.json has name=@yao/skila",
+        "package.json has bin.skila=dist/cli.js",
+        "package.json has engines.node>=20",
+        "package.json version=0.1.0",
+        "devDependencies includes esbuild and tailwindcss (NOT in runtime dependencies)",
+        "devDependencies includes @codemirror/state, @codemirror/view, @codemirror/lang-markdown, marked"
+      ]
+    },
+    {
+      "id": "AC5",
+      "phase": 1,
+      "title": ".claude-plugin/plugin.json declares /skila + PostToolUse + Stop hooks",
+      "passes": false,
+      "acceptanceCriteria": [
+        ".claude-plugin/plugin.json declares slash command /skila",
+        ".claude-plugin/plugin.json declares PostToolUse hook → dist/hooks/feedback.cjs",
+        ".claude-plugin/plugin.json declares Stop hook → dist/hooks/feedback.cjs",
+        "All hook paths resolve via __dirname-style shim (no absolute hardcoded paths)"
+      ]
+    },
+    {
+      "id": "AC6",
+      "phase": 1,
+      "title": "smithery.yaml declares npx -y @yao/skila mcp stdio",
+      "passes": false,
+      "acceptanceCriteria": [
+        "smithery.yaml exists at repo root",
+        "smithery.yaml command is `npx -y @yao/skila mcp`",
+        "transport is stdio"
+      ]
+    },
+    {
+      "id": "AC7",
+      "phase": 1,
+      "title": "npm pack --dry-run ships dist/ + .claude-plugin/ + smithery.yaml + README.md + LICENSE; vendor assets present; no CDN URLs",
+      "passes": false,
+      "acceptanceCriteria": [
+        "npm run build succeeds",
+        "npm pack --dry-run lists dist/, .claude-plugin/, smithery.yaml, README.md, LICENSE",
+        "Tarball contains dist/web/vendor/cm.js and dist/web/vendor/tw.css",
+        "grep -c 'https://' dist/web/index.html returns 0"
+      ]
+    },
+    {
+      "id": "AC8",
+      "phase": 2,
+      "title": "Append-and-revise: UPDATE→X with parentVersion + non-empty changelog",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/e2e/test_revise_path.ts passes",
+        "Given existing published skill X, /skila offers [UPDATE→X v0.1.0→v0.2.0] row",
+        "Accepting produces v0.2.0 with parentVersion=0.1.0 and non-empty changelog entry"
+      ]
+    },
+    {
+      "id": "AC9",
+      "phase": 2,
+      "title": "Feedback flywheel: Stop hook updates feedback.json within 1s (mocked-clock)",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/e2e/test_feedback_loop.ts uses vi.useFakeTimers()",
+        "Hook→feedback.json mtime delta ≤ 1000ms asserted deterministically",
+        "Burst test (50 PostToolUse fires within 100ms) asserts queueDepth ≤ 10"
+      ]
+    },
+    {
+      "id": "AC10",
+      "phase": 2,
+      "title": "Two-tier promotion: drafts→.draft-skila/, auto-promote→.staging-skila/, explicit graduate→published",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/e2e/test_promotion_gate.ts passes",
+        "Distill output lands in .draft-skila/ (loader-invisible)",
+        "Auto-promotion fires under floor (≥10 invocations OR ≥1 failure) and lands in .staging-skila/, NOT published",
+        "Explicit user graduate (web POST or CLI) moves to published",
+        "Reject path moves staging → archive"
+      ]
+    },
+    {
+      "id": "AC11",
+      "phase": 2,
+      "title": "Semantic similarity via LLM judge with three-input prompt + output shape + classification + hallucination guard",
+      "passes": false,
+      "acceptanceCriteria": [
+        "src/judge/prompt.ts builds prompt with 3 inputs: inventory, candidate, last-30 tool trace",
+        "tests/judge/test_judge_prompt.ts asserts all 3 inputs present in prompt",
+        "tests/judge/test_judge_output_shape.ts asserts JSON has decision, similarity, justification, suggested_version_bump",
+        "tests/judge/test_judge_decision_classification.ts: 3 fixture sessions → correct NEW/UPDATE classification",
+        "tests/judge/test_judge_hallucination_guard.ts: judge UPDATE→does-not-exist downgrades to [NEW] with structured warning"
+      ]
+    },
+    {
+      "id": "AC12",
+      "phase": 2,
+      "title": "Tool-trace-aware extraction: judge prompt cites tool sequence + e2e on 3 fixture sessions",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/judge/test_extraction_uses_tool_trace.ts passes",
+        "Judge prompt distillation section explicitly references 'tool sequence' as input",
+        "Tested on 3 fixture sessions"
+      ]
+    },
+    {
+      "id": "AC13",
+      "phase": 3,
+      "title": "skila serve on 127.0.0.1:7777 with auto-increment + clean Ctrl-C",
+      "passes": false,
+      "acceptanceCriteria": [
+        "skila serve binds 127.0.0.1:7777 by default",
+        "Auto-increments port on conflict",
+        "SIGINT exits cleanly"
+      ]
+    },
+    {
+      "id": "AC14",
+      "phase": 3,
+      "title": "GET / returns HTML; GET /api/skills returns JSON spanning 5 statuses (draft|staging|published|archived|disabled)",
+      "passes": false,
+      "acceptanceCriteria": [
+        "GET / returns valid HTML (200)",
+        "GET /api/skills returns JSON list",
+        "JSON includes all 5 status buckets: draft, staging, published, archived, disabled"
+      ]
+    },
+    {
+      "id": "AC15",
+      "phase": 3,
+      "title": "Write endpoints update disk + git commit (or flat snapshot); concurrent feedback writes safe via lockfile",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/web/test_api_endpoints.ts passes for both git and flat adapters",
+        "Each PUT/POST endpoint reflected on disk + git/flat history",
+        "tests/feedback/test_concurrent_writes.ts: 100 concurrent incrementUsage(name) → final usageCount=100 for every name; no lock-not-released warnings"
+      ]
+    },
+    {
+      "id": "AC16",
+      "phase": 3,
+      "title": "CodeMirror 6 editor (vendored, no CDN) loads/edits/saves via PUT; survives refresh",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/web/test_editor_e2e.ts passes (agent-browser driven)",
+        "CodeMirror 6 loaded from local ./vendor/cm.js (no https://)",
+        "Edit→Save→Reload persists changes"
+      ]
+    },
+    {
+      "id": "AC17",
+      "phase": 3,
+      "title": "Rollback creates new current version, never destroys history; revisionCount++ + changelog entry",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/e2e/test_rollback.ts passes",
+        "Rollback to v0.1.0 creates new v0.X.Y bytes-equal v0.1.0",
+        "v0.1.0 retained in storage history",
+        "revisionCount incremented; changelog has 'Rolled back to v0.1.0' entry"
+      ]
+    },
+    {
+      "id": "AC18",
+      "phase": 3,
+      "title": "Visual gate ≥7/10 via oh-my-claudecode:visual-verdict against Obsidian/GitHub reference",
+      "passes": false,
+      "acceptanceCriteria": [
+        "agent-browser captures screenshots of dashboard, skill list, skill detail, diff viewer",
+        "oh-my-claudecode:visual-verdict scores ≥ 7/10 vs Obsidian/GitHub-style reference",
+        "Sub-7 triggers designer agent rework before AC18 can close"
+      ]
+    },
+    {
+      "id": "AC18b",
+      "phase": 3,
+      "title": "First-paint LCP: cold ≤500ms, warm ≤200ms on local vendor",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/web/test_lcp_budget.ts passes",
+        "Cold cache LCP ≤ 500ms (first load, no prewarming)",
+        "Warm cache LCP ≤ 200ms (subsequent load)"
+      ]
+    },
+    {
+      "id": "AC18c",
+      "phase": 3,
+      "title": "Web UI surfaces staging candidates with graduate/reject; surfaces hallucination warning",
+      "passes": false,
+      "acceptanceCriteria": [
+        "Web UI shows staging-tier candidates",
+        "Each staging candidate has 'graduate' and 'reject' buttons",
+        "Hallucination fallback (judge proposed UPDATE→X but X not found) surfaces as warning banner"
+      ]
+    },
+    {
+      "id": "AC19",
+      "phase": 4,
+      "title": "GitBackedStorage via child_process.execFile (no simple-git dep)",
+      "passes": false,
+      "acceptanceCriteria": [
+        "src/storage/git.ts implements init/commit/listVersions/getVersion/diff",
+        "Uses child_process.execFile('git', ...) — no simple-git import anywhere in src/",
+        "tests/storage/test_adapter_selection.ts (git mode) passes"
+      ]
+    },
+    {
+      "id": "AC20",
+      "phase": 4,
+      "title": "FlatFileStorage with identical interface; versions/<name>/v0.X.Y/SKILL.md layout",
+      "passes": false,
+      "acceptanceCriteria": [
+        "src/storage/flat.ts implements same interface as git.ts",
+        "Files written to ~/.claude/skila-data/versions/<name>/v0.X.Y/SKILL.md",
+        "tests/storage/test_adapter_selection.ts (flat mode) passes"
+      ]
+    },
+    {
+      "id": "AC21",
+      "phase": 4,
+      "title": "Factory selects adapter via git --version once; logs once; never re-warns; no top-level skila storage migrate",
+      "passes": false,
+      "acceptanceCriteria": [
+        "Factory checks git --version at startup; selects adapter; logs selection ONCE",
+        "Double-boot produces 1 log line, no warning, no re-selection",
+        "Refuses silent switch (e.g., flat→git) via .adapter-mode sentinel",
+        "Top-level subcommand `skila storage migrate` does NOT exist (CLI returns 'unknown command')",
+        "Migration only via `skila doctor --fix-storage` with user confirmation"
+      ]
+    },
+    {
+      "id": "AC22",
+      "phase": 4,
+      "title": "All storage writes atomic via temp + fs.rename; kill -9 mid-write leaves old or new only",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/storage/test_atomic_writes.ts passes",
+        "kill -9 mid-write fork test: file is bytes-equal old OR new, never partial"
+      ]
+    },
+    {
+      "id": "AC23",
+      "phase": 5,
+      "title": "Full evolution-path 10-step e2e under git × flat matrix",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/e2e/test_evolution_path.ts implements all 10 steps from plan §4.4",
+        "Steps: setup → distill→draft → promote→published → distill→draft v0.2.0 → auto-stage → graduate → feedback×3 → rollback → disable → reactivate",
+        "Each step asserts FS state + git/flat history + feedback.json state",
+        "Test passes under git adapter",
+        "Test passes under flat adapter"
+      ]
+    },
+    {
+      "id": "AC24",
+      "phase": 6,
+      "title": "skila ships as real Anthropic skill package under skills/skila/",
+      "passes": false,
+      "acceptanceCriteria": [
+        "skills/skila/SKILL.md exists with valid frontmatter (name, description, ≤1024 chars)",
+        "skills/skila/scripts/ contains TS-compiled validate/lint/scan helpers",
+        "skills/skila/references/ contains skill-creator-schema, quality-bar, proposal-criteria",
+        "skills/skila/assets/ contains templates and prompts"
+      ]
+    },
+    {
+      "id": "AC25",
+      "phase": 6,
+      "title": "skila lint skills/skila/ returns 0 warnings (skila passes its own quality bar)",
+      "passes": false,
+      "acceptanceCriteria": [
+        "node dist/cli.js lint skills/skila/ exits 0",
+        "Output reports zero warnings"
+      ]
+    },
+    {
+      "id": "D5",
+      "phase": 2,
+      "title": "Smithery mcp mode storage isolation (ephemeral tmpdir; read-only; orphan cleanup)",
+      "passes": false,
+      "acceptanceCriteria": [
+        "tests/mcp/test_smithery_isolation.ts passes",
+        "Spawning `node dist/cli.js mcp` sets SKILA_HOME to /tmp/skila-smithery-<pid>/ in child env",
+        "No fd opened on ~/.claude/skila-data/ during Smithery mode",
+        "Mutation commands (distill/promote/graduate/archive/disable/reactivate/rollback/feedback) disabled in Smithery mode",
+        "Boot scans /tmp/skila-smithery-* and removes orphans (mtime > 1h)"
+      ]
+    }
+  ]
+}

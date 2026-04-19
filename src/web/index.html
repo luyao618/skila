@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280, initial-scale=1" />
+    <title>skila — skill inventory controller</title>
+    <link rel="stylesheet" href="./vendor/tw.css" />
+  </head>
+  <body class="bg-neutral-950 text-neutral-100 font-sans h-screen overflow-hidden">
+    <div id="app" class="h-full flex flex-col">
+      <!-- Top bar -->
+      <header class="flex items-center justify-between px-4 py-2 border-b border-neutral-800 bg-neutral-900">
+        <div class="flex items-center gap-4">
+          <span class="font-semibold tracking-tight">skila</span>
+          <nav class="flex gap-3 text-sm text-neutral-400">
+            <a href="#dashboard" class="hover:text-neutral-100">Dashboard</a>
+            <a href="#skills" class="hover:text-neutral-100">Skills</a>
+            <a href="#settings" class="hover:text-neutral-100">Settings</a>
+          </nav>
+        </div>
+        <div class="flex items-center gap-3 text-sm">
+          <span class="text-emerald-400">● 0 published</span>
+          <span class="text-amber-400">● 0 drafts</span>
+          <span class="text-sky-400">● 0 staging</span>
+        </div>
+      </header>
+
+      <!-- Three-pane body -->
+      <div class="flex-1 grid grid-cols-[260px_minmax(0,1fr)_320px] min-h-0">
+        <!-- Left sidebar: filter + search + skills -->
+        <aside class="border-r border-neutral-800 flex flex-col min-h-0">
+          <section class="p-3 border-b border-neutral-800">
+            <h2 class="text-xs uppercase tracking-wider text-neutral-500 mb-2">Filter</h2>
+            <ul class="space-y-1 text-sm">
+              <li><label class="flex items-center gap-2"><input type="checkbox" checked /> published</label></li>
+              <li><label class="flex items-center gap-2"><input type="checkbox" /> staging</label></li>
+              <li><label class="flex items-center gap-2"><input type="checkbox" /> draft</label></li>
+              <li><label class="flex items-center gap-2"><input type="checkbox" /> archived</label></li>
+              <li><label class="flex items-center gap-2"><input type="checkbox" /> disabled</label></li>
+            </ul>
+          </section>
+          <section class="p-3 border-b border-neutral-800">
+            <h2 class="text-xs uppercase tracking-wider text-neutral-500 mb-2">Search</h2>
+            <input
+              type="search"
+              placeholder="filter by name…"
+              class="w-full bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500"
+            />
+          </section>
+          <section class="p-3 flex-1 overflow-y-auto">
+            <h2 class="text-xs uppercase tracking-wider text-neutral-500 mb-2">Skills</h2>
+            <ul id="skill-list" class="space-y-1 text-sm text-neutral-400">
+              <li class="italic text-neutral-600">no skills yet — phase 3 will populate this list</li>
+            </ul>
+          </section>
+        </aside>
+
+        <!-- Center: editor area -->
+        <main class="flex flex-col min-h-0">
+          <div class="px-4 py-2 border-b border-neutral-800 flex items-center justify-between">
+            <h1 id="active-skill" class="font-medium text-neutral-200">no skill selected</h1>
+            <div class="flex gap-2 text-xs text-neutral-500">
+              <button class="px-2 py-1 rounded border border-neutral-800 hover:border-neutral-600">Edit SKILL.md</button>
+              <button class="px-2 py-1 rounded border border-neutral-800 hover:border-neutral-600">Scripts</button>
+              <button class="px-2 py-1 rounded border border-neutral-800 hover:border-neutral-600">References</button>
+            </div>
+          </div>
+          <div id="editor" class="flex-1 min-h-0 overflow-hidden bg-neutral-950"></div>
+          <div class="px-4 py-2 border-t border-neutral-800 flex items-center justify-between text-sm">
+            <div class="flex gap-2">
+              <button class="px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 text-white">Save</button>
+              <button class="px-3 py-1 rounded border border-neutral-800 hover:border-neutral-600">Discard</button>
+            </div>
+            <span class="text-neutral-500 text-xs">phase 1 shell — editor wires up in phase 3</span>
+          </div>
+        </main>
+
+        <!-- Right inspector: versions + feedback + actions -->
+        <aside class="border-l border-neutral-800 flex flex-col min-h-0 overflow-y-auto">
+          <section class="p-3 border-b border-neutral-800">
+            <h2 class="text-xs uppercase tracking-wider text-neutral-500 mb-2">Versions</h2>
+            <ul class="space-y-1 text-sm text-neutral-400">
+              <li class="italic text-neutral-600">no versions yet</li>
+            </ul>
+          </section>
+          <section class="p-3 border-b border-neutral-800">
+            <h2 class="text-xs uppercase tracking-wider text-neutral-500 mb-2">Feedback</h2>
+            <p class="text-sm text-neutral-400">success rate: <span class="text-neutral-600">—</span></p>
+            <p class="text-sm text-neutral-400">usage count: <span class="text-neutral-600">—</span></p>
+            <p class="text-sm text-neutral-400">last used: <span class="text-neutral-600">—</span></p>
+          </section>
+          <section class="p-3">
+            <h2 class="text-xs uppercase tracking-wider text-neutral-500 mb-2">Actions</h2>
+            <div class="grid gap-2 text-sm">
+              <button class="px-3 py-1 rounded border border-neutral-800 hover:border-neutral-600 text-left">Promote draft</button>
+              <button class="px-3 py-1 rounded border border-neutral-800 hover:border-neutral-600 text-left">Graduate staging</button>
+              <button class="px-3 py-1 rounded border border-neutral-800 hover:border-neutral-600 text-left">Rollback to v0.X</button>
+              <button class="px-3 py-1 rounded border border-neutral-800 hover:border-neutral-600 text-left">Disable</button>
+              <button class="px-3 py-1 rounded border border-neutral-800 hover:border-neutral-600 text-left">Archive</button>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <script type="module">
+      // Phase 1: smoke-load vendored CodeMirror + marked to prove the pipeline.
+      // Real editor wiring lands in phase 3 alongside the API client.
+      import { EditorState, EditorView, markdown, marked } from "./vendor/cm.js";
+
+      const host = document.getElementById("editor");
+      if (host && EditorState && EditorView && markdown) {
+        const state = EditorState.create({
+          doc: "# skila\n\nphase 1 shell — open a skill from the left to begin editing.\n",
+          extensions: [markdown()]
+        });
+        new EditorView({ state, parent: host });
+      }
+
+      // marked is used for changelog rendering in phase 3 — touch it now to keep tree-shaking honest.
+      window.__skila_marked = typeof marked === "function";
+    </script>
+  </body>
+</html>

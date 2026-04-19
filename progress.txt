@@ -1,0 +1,32 @@
+# skila v2 Ralph Progress Log
+
+## Iteration 1 (2026-04-19)
+
+### Setup
+- PRD created at `.omc/prd.json` with 27 stories (25 ACs + AC18b/AC18c sub-criteria + D5 Smithery isolation)
+- Phase 0 already complete (commits 4ebc952 + 381aa1c on main)
+- AC1, AC2, AC3 marked passes:true with evidence
+
+### Pending
+- Phase 1: AC4–AC7 (npm package skeleton + esbuild/tailwindcss vendor pipeline)
+- Phase 2: AC8–AC12, D5 (5 superiority dimensions + Smithery isolation)
+- Phase 3: AC13–AC18c (web control panel + visual + LCP)
+- Phase 4: AC19–AC22 (storage adapters)
+- Phase 5: AC23 (evolution-path e2e under git × flat matrix)
+- Phase 6: AC24, AC25 (dogfood skill + lint passes)
+
+### Codebase patterns
+- spec: `.omc/specs/deep-interview-skila-v2.md`
+- plan: `.omc/plans/skila-v2-implementation-plan.md` (10 sections, includes ADR + Iteration 2 Polish)
+- design north star: `docs/research/learner-deep-study.md`
+- v1 fully removed; greenfield TS rewrite
+- npm package name: `@yao/skila` (claimed)
+- runtime substrate: TS only, Node ≥20, no Python in runtime path
+- web vendor: build-time esbuild + tailwindcss → dist/web/vendor/{cm.js,tw.css} (no CDN)
+- storage: git-backed default + auto-degrade to flat; .adapter-mode sentinel; no silent switch
+- staging tier: auto-promote to .staging-skila/ (loader-invisible); explicit graduate→published
+
+### Learnings
+- Plan §5 prescribes Phase order strictly; Phase 1 must land complete before Phase 2 can begin (cli.ts stub is a Phase 1 deliverable that Phase 2 commands plug into)
+- AC23 evolution-path is THE acceptance gate; it depends on Phase 2/3/4 being green first
+- Use --critic=critic to keep verifier consistent with the plan's authoring critic context

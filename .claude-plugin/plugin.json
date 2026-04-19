@@ -1,0 +1,43 @@
+{
+  "name": "skila",
+  "description": "Self-improving skill inventory controller: /skila distills sessions into versioned skills with feedback-driven evolution and a web control panel.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "keywords": [
+    "skill",
+    "memory",
+    "agent",
+    "evolution",
+    "claude-code"
+  ],
+  "commands": [
+    {
+      "name": "skila",
+      "description": "Distill the current session into a NEW or UPDATE skill proposal."
+    }
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/dist/hooks/feedback.cjs\" PostToolUse"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/dist/hooks/feedback.cjs\" Stop"
+          }
+        ]
+      }
+    ]
+  }
+}
