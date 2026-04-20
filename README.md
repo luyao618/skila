@@ -9,14 +9,14 @@ Self-improving skill inventory controller for Claude Code: distill sessions into
 ### npm (global CLI)
 
 ```sh
-npm i -g @yao/skila
+npm i -g @luyao618/skila
 skila --help
 ```
 
 ### Claude Code plugin marketplace
 
 ```sh
-/plugin marketplace add yao/skila
+/plugin marketplace add luyao618/skila
 /plugin install skila@skila
 ```
 
@@ -25,7 +25,7 @@ The plugin auto-registers the `/skila` slash command plus PostToolUse + Stop hoo
 ### Smithery (MCP)
 
 ```sh
-npx -y @yao/skila mcp
+npx -y @luyao618/skila mcp
 ```
 
 Smithery deploys it as an ephemeral, read-only MCP server (mutation commands are disabled in this transport — see Decision D5 in the implementation plan).

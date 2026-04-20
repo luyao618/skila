@@ -5,4 +5,4 @@ configSchema:
   required: []
   properties: {}
 commandFunction: |-
-  (config) => ({ command: 'npx', args: ['-y', '@yao/skila', 'mcp'], env: {} })
+  (config) => ({ command: 'npx', args: ['-y', '@luyao618/skila', 'mcp'], env: {} })

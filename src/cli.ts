@@ -9,7 +9,7 @@ async function dispatch(argv: string[]): Promise<number> {
     return 0;
   }
   if (argv[0] === "-v" || argv[0] === "--version" || argv[0] === "version") {
-    process.stdout.write("@yao/skila 0.1.0\n");
+    process.stdout.write("@luyao618/skila 0.0.1\n");
     return 0;
   }
   const cmd = argv[0];

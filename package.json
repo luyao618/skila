@@ -1,6 +1,6 @@
 {
-  "name": "@yao/skila",
-  "version": "0.1.0",
+  "name": "@luyao618/skila",
+  "version": "0.0.1",
   "description": "Self-improving skill inventory controller for Claude Code: distill, version, evolve, and graduate skills via slash command + web control panel + MCP.",
   "type": "module",
   "bin": {
