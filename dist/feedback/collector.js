@@ -17,6 +17,12 @@ import { recordInvocation } from "./store.js";
 const queue = [];
 let draining = false;
 const MAX_DRAIN_BATCH = 25;
+const MAX_QUEUE_DEPTH = 10;
+// Per-skill overflow counter for when queue is at cap.
+const _queueDropCounters = {};
+export function getQueueStats() {
+    return { depth: queue.length, dropCounters: { ..._queueDropCounters } };
+}
 async function drain() {
     if (draining)
         return;
@@ -27,6 +33,11 @@ async function drain() {
             for (const item of batch) {
                 try {
                     await recordInvocation(item.name, item.outcome, item.session);
+                    // Replay coalesced (overflow) invocations
+                    const extra = item.droppedCount ?? 0;
+                    for (let i = 0; i < extra; i++) {
+                        await recordInvocation(item.name, item.outcome, item.session);
+                    }
                 }
                 catch {
                     // swallow — losing a single feedback record is acceptable
@@ -39,8 +50,20 @@ async function drain() {
     }
 }
 export function enqueueFeedback(name, outcome, session) {
-    if (queue.length >= 10) {
-        // hold queue at 10 — additional fires increment counters via direct write
+    if (queue.length >= MAX_QUEUE_DEPTH) {
+        // Coalesce: find the last entry for this skill and increment its droppedCount
+        let coalesced = false;
+        for (let i = queue.length - 1; i >= 0; i--) {
+            if (queue[i].name === name) {
+                queue[i].droppedCount = (queue[i].droppedCount ?? 0) + 1;
+                coalesced = true;
+                break;
+            }
+        }
+        if (!coalesced) {
+            // No existing entry for this skill — track in per-skill drop counter
+            _queueDropCounters[name] = (_queueDropCounters[name] ?? 0) + 1;
+        }
     }
     else {
         queue.push({ name, outcome, session });

@@ -207,7 +207,14 @@ try {
   }, null, 2));
 
   console.log("\n[visual-verdict] verdict-config.json written to", SCREENSHOT_DIR);
-  console.log("[visual-verdict] score=PENDING (run visual-verdict skill manually)");
+  // Print a machine-readable score line (PENDING = 0 until manual verdict is run)
+  // When the visual-verdict skill is invoked, it replaces this with an actual score.
+  const scoreFile = join(SCREENSHOT_DIR, "score.json");
+  let score = 0;
+  if (existsSync(scoreFile)) {
+    try { score = JSON.parse(readFileSync(scoreFile, "utf8")).score ?? 0; } catch {}
+  }
+  console.log(`score: ${score}`);
 
 } finally {
   if (serveProcess) serveProcess.kill("SIGTERM");

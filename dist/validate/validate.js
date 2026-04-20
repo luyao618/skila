@@ -37,6 +37,8 @@ export function validateSkillContent(raw, opts = {}) {
             errors.push(`invalid status: ${fm.skila.status}`);
         if (typeof fm.skila.version !== "string")
             errors.push("skila.version must be a string");
+        else if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(fm.skila.version))
+            errors.push(`invalid version format: ${fm.skila.version}`);
         if (!Array.isArray(fm.skila.changelog))
             errors.push("skila.changelog must be an array");
     }

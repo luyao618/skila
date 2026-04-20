@@ -53,7 +53,27 @@ export async function moveSkillDir(skill, newStatus) {
     parsed.frontmatter.skila.lastImprovedAt = new Date().toISOString();
     const serialized = serializeSkillFile(parsed.frontmatter, parsed.body);
     // Write live + adapter history
-    atomicWriteFileSync(skillFile, serialized);
+    try {
+        atomicWriteFileSync(skillFile, serialized);
+    }
+    catch (writeErr) {
+        // Roll back the directory move so FS state is consistent on failure.
+        try {
+            renameSync(destDir, srcDir);
+        }
+        catch {
+            try {
+                copyDirRecursive(destDir, srcDir);
+                rmDir(destDir);
+            }
+            catch { /* best effort */ }
+        }
+        const e = writeErr;
+        const ctx = new Error(`moveSkillDir: failed to write ${skillFile}: ${e.message}`);
+        ctx.code = e.code;
+        ctx.cause = writeErr;
+        throw ctx;
+    }
     try {
         const adapter = await getAdapter();
         await adapter.moveSkill(skill.name, skill.status, newStatus);
@@ -63,9 +83,16 @@ export async function moveSkillDir(skill, newStatus) {
         });
     }
     catch (err) {
-        // Adapter mismatch (Scenario C) must surface; other errors do not break the move.
-        if (err?.code === "E_ADAPTER_MISMATCH")
-            throw err;
+        // E_ADAPTER_MISMATCH is a known, recoverable mismatch — swallow it.
+        // All other adapter errors are unexpected and must surface with context.
+        const code = err?.code;
+        if (code !== "E_ADAPTER_MISMATCH") {
+            const msg = err.message ?? String(err);
+            const ctx = new Error(`moveSkillDir: adapter error (${code ?? "unknown"}): ${msg}`);
+            ctx.code = code;
+            ctx.cause = err;
+            throw ctx;
+        }
     }
     return destDir;
 }

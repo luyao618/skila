@@ -207,10 +207,11 @@ describe.each([
       await runFeedback(SKILL_NAME, "success");
 
       const fb = JSON.parse(readFileSync(feedbackPath(), "utf8"));
-      expect(fb[SKILL_NAME]).toBeDefined();
-      expect(fb[SKILL_NAME].usageCount).toBe(13);
+      const fbEntries = fb.entries ?? fb;
+      expect(fbEntries[SKILL_NAME]).toBeDefined();
+      expect(fbEntries[SKILL_NAME].usageCount).toBe(13);
       // All 13 successes → successRate === 1.0
-      expect(fb[SKILL_NAME].successRate).toBeCloseTo(1.0, 5);
+      expect(fbEntries[SKILL_NAME].successRate).toBeCloseTo(1.0, 5);
 
       // ----------------------------------------------------------
       // Step 8: rollback → v0.3.0 published, bytes-equal v0.1.0 body,

@@ -18,7 +18,8 @@ describe("AC9 — feedback flywheel", () => {
     expect(existsSync(feedbackPath())).toBe(true);
     expect(delta).toBeLessThanOrEqual(1000);
     const fb = JSON.parse(readFileSync(feedbackPath(), "utf8"));
-    expect(fb["azure-pipeline-debug"].usageCount).toBe(1);
+    const fbEntries = fb.entries ?? fb;
+    expect(fbEntries["azure-pipeline-debug"].usageCount).toBe(1);
   });
 
   it("burst test: 50 PostToolUse fires within 100ms → queueDepth ≤ 10", async () => {

@@ -9,6 +9,30 @@ import { ensureSkilaHome, loadConfig } from "../config/config.js";
 import { atomicWriteFileSync } from "../storage/atomic.js";
 import type { FeedbackStoreShape, FeedbackEntry, FeedbackInvocation } from "../types.js";
 
+const MAX_LOCK_ATTEMPTS = 3;
+const MAX_INVOCATIONS = 200;
+
+// Extended entry shape that includes histogram overflow bucket.
+export interface FeedbackEntryWithHistogram extends FeedbackEntry {
+  invocationsHistogram?: { hourly: number[] };
+}
+
+/**
+ * Cap entry.invocations at MAX_INVOCATIONS.
+ * Overflowed (oldest) entries are collapsed into invocationsHistogram.hourly
+ * — a 24-slot array where index = hour-of-day (UTC).
+ */
+function capInvocations(entry: FeedbackEntryWithHistogram): void {
+  if (entry.invocations.length <= MAX_INVOCATIONS) return;
+  const overflow = entry.invocations.splice(0, entry.invocations.length - MAX_INVOCATIONS);
+  const histogram = entry.invocationsHistogram ?? { hourly: new Array(24).fill(0) };
+  for (const inv of overflow) {
+    const hour = new Date(inv.ts).getUTCHours();
+    histogram.hourly[hour] = (histogram.hourly[hour] ?? 0) + 1;
+  }
+  entry.invocationsHistogram = histogram;
+}
+
 export function feedbackPath(): string {
   return join(ensureSkilaHome(), "feedback.json");
 }
@@ -44,7 +68,7 @@ async function acquireLock(timeoutMs: number, staleMs: number): Promise<void> {
           continue;
         }
       } catch { /* lock vanished, retry */ }
-      if (Date.now() - start >= timeoutMs && attempt >= 3) {
+      if (Date.now() - start >= timeoutMs || attempt >= MAX_LOCK_ATTEMPTS) {
         throw new Error(`feedback lock acquire timeout after ${timeoutMs}ms`);
       }
       attempt++;
@@ -74,17 +98,24 @@ export function readFeedbackSync(): FeedbackStoreShape {
     const raw = readFileSync(p, "utf8");
     if (!raw.trim()) return {};
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? (parsed as FeedbackStoreShape) : {};
+    if (!parsed || typeof parsed !== "object") return {};
+    // v1 envelope: { schemaVersion: 1, entries: { ... } }
+    if (parsed.schemaVersion === 1 && parsed.entries && typeof parsed.entries === "object") {
+      return parsed.entries as FeedbackStoreShape;
+    }
+    // v0: raw FeedbackStoreShape object (transparent upgrade on next write)
+    return parsed as FeedbackStoreShape;
   } catch {
     return {};
   }
 }
 
 function writeFeedbackSync(data: FeedbackStoreShape): void {
-  atomicWriteFileSync(feedbackPath(), JSON.stringify(data, null, 2));
+  const envelope = { schemaVersion: 1, entries: data };
+  atomicWriteFileSync(feedbackPath(), JSON.stringify(envelope, null, 2));
 }
 
-function emptyEntry(): FeedbackEntry {
+function emptyEntry(): FeedbackEntryWithHistogram {
   return { successRate: 0, usageCount: 0, failureCount: 0, lastUsedAt: "", invocations: [] };
 }
 
@@ -101,9 +132,10 @@ export async function recordInvocation(
 ): Promise<FeedbackEntry> {
   return withLock(() => {
     const data = readFeedbackSync();
-    const entry = data[name] ?? emptyEntry();
+    const entry: FeedbackEntryWithHistogram = (data[name] as FeedbackEntryWithHistogram) ?? emptyEntry();
     const inv: FeedbackInvocation = { ts: new Date().toISOString(), outcome, session };
     entry.invocations.push(inv);
+    capInvocations(entry);
     entry.usageCount += 1;
     if (outcome === "failure") entry.failureCount += 1;
     entry.lastUsedAt = inv.ts;
@@ -118,8 +150,8 @@ export async function incrementUsage(name: string, outcome: "success" | "failure
   return recordInvocation(name, outcome);
 }
 
-// Synchronous variant used by hook tail-write queue (still goes through lock dir
-// via a busy-loop bounded by config lockTimeoutMs).
+// Synchronous variant used by hook tail-write queue.
+// FIX-M19: busy-spin replaced with Atomics.wait to yield CPU during lock contention.
 export function recordInvocationSync(
   name: string,
   outcome: "success" | "failure" | "unknown",
@@ -128,6 +160,9 @@ export function recordInvocationSync(
   const cfg = loadConfig();
   const lp = lockPath();
   const start = Date.now();
+  // Shared buffer for Atomics.wait sleep (1 element Int32Array)
+  const sleepBuf = new SharedArrayBuffer(4);
+  const sleepView = new Int32Array(sleepBuf);
   while (true) {
     try {
       mkdirSync(lp, { recursive: false });
@@ -145,16 +180,16 @@ export function recordInvocationSync(
       if (Date.now() - start > cfg.lockTimeoutMs * 4) {
         throw new Error("feedback lock timeout (sync)");
       }
-      // small busy spin
-      const spinUntil = Date.now() + jitter(5, 15);
-      while (Date.now() < spinUntil) { /* spin */ }
+      // Yield CPU with Atomics.wait instead of busy-spin
+      Atomics.wait(sleepView, 0, 0, jitter(5, 15));
     }
   }
   try {
     const data = readFeedbackSync();
-    const entry = data[name] ?? emptyEntry();
+    const entry: FeedbackEntryWithHistogram = (data[name] as FeedbackEntryWithHistogram) ?? emptyEntry();
     const inv: FeedbackInvocation = { ts: new Date().toISOString(), outcome, session };
     entry.invocations.push(inv);
+    capInvocations(entry);
     entry.usageCount += 1;
     if (outcome === "failure") entry.failureCount += 1;
     entry.lastUsedAt = inv.ts;

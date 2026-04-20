@@ -20,11 +20,20 @@ interface QueueItem {
   name: string;
   outcome: "success" | "failure" | "unknown";
   session?: string;
+  droppedCount?: number; // coalesced overflow for this skill
 }
 
 const queue: QueueItem[] = [];
 let draining = false;
 const MAX_DRAIN_BATCH = 25;
+const MAX_QUEUE_DEPTH = 10;
+
+// Per-skill overflow counter for when queue is at cap.
+const _queueDropCounters: Record<string, number> = {};
+
+export function getQueueStats(): { depth: number; dropCounters: Record<string, number> } {
+  return { depth: queue.length, dropCounters: { ..._queueDropCounters } };
+}
 
 async function drain(): Promise<void> {
   if (draining) return;
@@ -35,6 +44,11 @@ async function drain(): Promise<void> {
       for (const item of batch) {
         try {
           await recordInvocation(item.name, item.outcome, item.session);
+          // Replay coalesced (overflow) invocations
+          const extra = item.droppedCount ?? 0;
+          for (let i = 0; i < extra; i++) {
+            await recordInvocation(item.name, item.outcome, item.session);
+          }
         } catch {
           // swallow — losing a single feedback record is acceptable
         }
@@ -46,8 +60,20 @@ async function drain(): Promise<void> {
 }
 
 export function enqueueFeedback(name: string, outcome: "success" | "failure" | "unknown", session?: string): number {
-  if (queue.length >= 10) {
-    // hold queue at 10 — additional fires increment counters via direct write
+  if (queue.length >= MAX_QUEUE_DEPTH) {
+    // Coalesce: find the last entry for this skill and increment its droppedCount
+    let coalesced = false;
+    for (let i = queue.length - 1; i >= 0; i--) {
+      if (queue[i].name === name) {
+        queue[i].droppedCount = (queue[i].droppedCount ?? 0) + 1;
+        coalesced = true;
+        break;
+      }
+    }
+    if (!coalesced) {
+      // No existing entry for this skill — track in per-skill drop counter
+      _queueDropCounters[name] = (_queueDropCounters[name] ?? 0) + 1;
+    }
   } else {
     queue.push({ name, outcome, session });
   }

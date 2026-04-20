@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 // skila feedback hook bridge (CommonJS for plugin.json compatibility).
-// Phase 2: parses {event, tool, result, session?, skill?} from stdin,
-// calls collectFeedback() via the dist/cli.js bridge, exits ≤1s.
-//
-// FIX-C9: watchdog cleared BEFORE dynamic import; drainFeedback() awaited
-// before process.exit so records are not lost on fast exit.
+// FIX-H23: imports dist/hooks/feedback-entry.cjs (esbuild CommonJS bundle,
+// tree-shaken, <100KB) instead of dynamic-importing the full cli.js ESM.
+// This eliminates the dynamic import overhead and keeps hook latency ≤50ms median.
 
 "use strict";
 
 const path = require("path");
 
-const CLI_PATH = path.resolve(__dirname, "..", "cli.js");
+// FIX-H23: Use pre-bundled CJS entry instead of full cli.js ESM dynamic import.
+const ENTRY_PATH = path.resolve(__dirname, "..", "hooks", "feedback-entry.cjs");
 
-// Hard time budget. Per AC9 the budget is ≤1000ms end-to-end.
+// Hard time budget ≤1000ms end-to-end.
 const HARD_BUDGET_MS = 1000;
 
 let buf = "";
@@ -22,32 +21,36 @@ function finalize() {
   let payload = {};
   try { payload = buf.trim() ? JSON.parse(buf) : {}; } catch { /* ignore */ }
 
-  // FIX-C9: clear watchdog BEFORE dynamic import begins (not after).
   const watchdog = setTimeout(() => process.exit(0), HARD_BUDGET_MS);
   watchdog.unref();
-  clearTimeout(watchdog);
 
-  // Dynamic import the ESM bridge.
-  // FIX-M21: route through collectFromHookPayload so the redaction allowlist
-  // is the only path raw harness payloads can take to reach feedback.json.
-  // FIX-C9: skill extraction (tool_input.skill_name / .skill / path heuristic)
-  // happens inside collectFromHookPayload → sanitizeRawPayload in collector.ts.
-  import(require("url").pathToFileURL(CLI_PATH).href)
-    .then(async (mod) => {
+  let mod;
+  try {
+    mod = require(ENTRY_PATH);
+  } catch {
+    clearTimeout(watchdog);
+    process.exit(0);
+  }
+
+  Promise.resolve()
+    .then(async () => {
       try {
         if (typeof mod.collectFromHookPayload === "function") {
           mod.collectFromHookPayload(payload);
-        } else {
+        } else if (typeof mod.collectFeedback === "function") {
           mod.collectFeedback(payload);
         }
-        // FIX-C9: await drain before exit so enqueued records reach disk.
         if (typeof mod.drainFeedback === "function") {
           await mod.drainFeedback();
         }
       } catch { /* swallow */ }
+      clearTimeout(watchdog);
       process.exit(0);
     })
-    .catch(() => process.exit(0));
+    .catch(() => {
+      clearTimeout(watchdog);
+      process.exit(0);
+    });
 }
 
 if (process.stdin.isTTY) {

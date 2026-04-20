@@ -6,6 +6,24 @@ import { mkdirSync, rmdirSync, existsSync, statSync, readFileSync } from "node:f
 import { join } from "node:path";
 import { ensureSkilaHome, loadConfig } from "../config/config.js";
 import { atomicWriteFileSync } from "../storage/atomic.js";
+const MAX_LOCK_ATTEMPTS = 3;
+const MAX_INVOCATIONS = 200;
+/**
+ * Cap entry.invocations at MAX_INVOCATIONS.
+ * Overflowed (oldest) entries are collapsed into invocationsHistogram.hourly
+ * — a 24-slot array where index = hour-of-day (UTC).
+ */
+function capInvocations(entry) {
+    if (entry.invocations.length <= MAX_INVOCATIONS)
+        return;
+    const overflow = entry.invocations.splice(0, entry.invocations.length - MAX_INVOCATIONS);
+    const histogram = entry.invocationsHistogram ?? { hourly: new Array(24).fill(0) };
+    for (const inv of overflow) {
+        const hour = new Date(inv.ts).getUTCHours();
+        histogram.hourly[hour] = (histogram.hourly[hour] ?? 0) + 1;
+    }
+    entry.invocationsHistogram = histogram;
+}
 export function feedbackPath() {
     return join(ensureSkilaHome(), "feedback.json");
 }
@@ -43,7 +61,7 @@ async function acquireLock(timeoutMs, staleMs) {
                 }
             }
             catch { /* lock vanished, retry */ }
-            if (Date.now() - start >= timeoutMs && attempt >= 3) {
+            if (Date.now() - start >= timeoutMs || attempt >= MAX_LOCK_ATTEMPTS) {
                 throw new Error(`feedback lock acquire timeout after ${timeoutMs}ms`);
             }
             attempt++;
@@ -76,14 +94,22 @@ export function readFeedbackSync() {
         if (!raw.trim())
             return {};
         const parsed = JSON.parse(raw);
-        return parsed && typeof parsed === "object" ? parsed : {};
+        if (!parsed || typeof parsed !== "object")
+            return {};
+        // v1 envelope: { schemaVersion: 1, entries: { ... } }
+        if (parsed.schemaVersion === 1 && parsed.entries && typeof parsed.entries === "object") {
+            return parsed.entries;
+        }
+        // v0: raw FeedbackStoreShape object (transparent upgrade on next write)
+        return parsed;
     }
     catch {
         return {};
     }
 }
 function writeFeedbackSync(data) {
-    atomicWriteFileSync(feedbackPath(), JSON.stringify(data, null, 2));
+    const envelope = { schemaVersion: 1, entries: data };
+    atomicWriteFileSync(feedbackPath(), JSON.stringify(envelope, null, 2));
 }
 function emptyEntry() {
     return { successRate: 0, usageCount: 0, failureCount: 0, lastUsedAt: "", invocations: [] };
@@ -99,6 +125,7 @@ export async function recordInvocation(name, outcome, session) {
         const entry = data[name] ?? emptyEntry();
         const inv = { ts: new Date().toISOString(), outcome, session };
         entry.invocations.push(inv);
+        capInvocations(entry);
         entry.usageCount += 1;
         if (outcome === "failure")
             entry.failureCount += 1;
@@ -112,12 +139,15 @@ export async function recordInvocation(name, outcome, session) {
 export async function incrementUsage(name, outcome = "success") {
     return recordInvocation(name, outcome);
 }
-// Synchronous variant used by hook tail-write queue (still goes through lock dir
-// via a busy-loop bounded by config lockTimeoutMs).
+// Synchronous variant used by hook tail-write queue.
+// FIX-M19: busy-spin replaced with Atomics.wait to yield CPU during lock contention.
 export function recordInvocationSync(name, outcome, session) {
     const cfg = loadConfig();
     const lp = lockPath();
     const start = Date.now();
+    // Shared buffer for Atomics.wait sleep (1 element Int32Array)
+    const sleepBuf = new SharedArrayBuffer(4);
+    const sleepView = new Int32Array(sleepBuf);
     while (true) {
         try {
             mkdirSync(lp, { recursive: false });
@@ -141,9 +171,8 @@ export function recordInvocationSync(name, outcome, session) {
             if (Date.now() - start > cfg.lockTimeoutMs * 4) {
                 throw new Error("feedback lock timeout (sync)");
             }
-            // small busy spin
-            const spinUntil = Date.now() + jitter(5, 15);
-            while (Date.now() < spinUntil) { /* spin */ }
+            // Yield CPU with Atomics.wait instead of busy-spin
+            Atomics.wait(sleepView, 0, 0, jitter(5, 15));
         }
     }
     try {
@@ -151,6 +180,7 @@ export function recordInvocationSync(name, outcome, session) {
         const entry = data[name] ?? emptyEntry();
         const inv = { ts: new Date().toISOString(), outcome, session };
         entry.invocations.push(inv);
+        capInvocations(entry);
         entry.usageCount += 1;
         if (outcome === "failure")
             entry.failureCount += 1;

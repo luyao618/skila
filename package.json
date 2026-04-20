@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "build-hooks": "node -e \"import('esbuild').then(({build})=>build({entryPoints:['src/feedback/collector.ts'],bundle:true,format:'cjs',platform:'node',target:'node20',minify:true,treeShaking:true,legalComments:'none',outfile:'dist/hooks/feedback-entry.cjs'}))\"",
     "postbuild": "node scripts/postbuild.mjs",
     "test": "vitest run",
     "test:watch": "vitest",

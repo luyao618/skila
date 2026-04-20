@@ -165,8 +165,14 @@
   "hotPaths": [
     {
       "path": "src/cli.ts",
-      "accessCount": 23,
-      "lastAccessed": 1776671839292,
+      "accessCount": 26,
+      "lastAccessed": 1776674505540,
+      "type": "file"
+    },
+    {
+      "path": "src/hooks/feedback.cjs",
+      "accessCount": 17,
+      "lastAccessed": 1776674493630,
       "type": "file"
     },
     {
@@ -176,28 +182,28 @@
       "type": "file"
     },
     {
-      "path": "src/hooks/feedback.cjs",
-      "accessCount": 13,
-      "lastAccessed": 1776668066965,
-      "type": "file"
-    },
-    {
       "path": "src/storage/atomic.ts",
-      "accessCount": 13,
-      "lastAccessed": 1776669804714,
+      "accessCount": 14,
+      "lastAccessed": 1776672953427,
       "type": "file"
     },
     {
       "path": "README.md",
-      "accessCount": 11,
-      "lastAccessed": 1776664403881,
+      "accessCount": 14,
+      "lastAccessed": 1776674543679,
       "type": "file"
     },
     {
       "path": "package.json",
-      "accessCount": 9,
-      "lastAccessed": 1776664563959,
+      "accessCount": 11,
+      "lastAccessed": 1776674493601,
       "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 10,
+      "lastAccessed": 1776672751326,
+      "type": "directory"
     },
     {
       "path": ".claude-plugin/plugin.json",
@@ -212,22 +218,16 @@
       "type": "file"
     },
     {
-      "path": "",
+      "path": "src/types.ts",
       "accessCount": 9,
-      "lastAccessed": 1776670997057,
-      "type": "directory"
+      "lastAccessed": 1776672830621,
+      "type": "file"
     },
     {
       "path": "docs/research/hermes-and-memex-study.md",
       "accessCount": 8,
       "lastAccessed": 1776575496097,
       "type": "directory"
-    },
-    {
-      "path": "src/types.ts",
-      "accessCount": 8,
-      "lastAccessed": 1776667130937,
-      "type": "file"
     },
     {
       "path": "skills/skila/SKILL.md",

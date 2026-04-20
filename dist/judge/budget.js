@@ -3,9 +3,10 @@
 // - inventory-hash cache (~/.claude/skila-data/judge-cache/, 7d TTL)
 // - degraded path: name-only inventory when full prompt > budget
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync, existsSync, statSync, readdirSync, unlinkSync } from "node:fs";
+import { readFileSync, existsSync, statSync, readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { ensureSkilaHome, loadConfig } from "../config/config.js";
+import { atomicWriteFileSync } from "../storage/atomic.js";
 // Cheap token estimator: ~4 chars per token (English-leaning).
 export function estimateTokens(s) {
     return Math.ceil(s.length / 4);
@@ -41,7 +42,7 @@ export function readInventoryCache(hash) {
 }
 export function writeInventoryCache(hash, summary) {
     const f = join(cacheDir(), `inventory-${hash}.json`);
-    writeFileSync(f, JSON.stringify({ ts: Date.now(), summary }));
+    atomicWriteFileSync(f, JSON.stringify({ ts: Date.now(), summary }));
 }
 export function pruneStaleCache() {
     const dir = cacheDir();
@@ -73,6 +74,11 @@ export function inventorySummary(inv, full) {
 export function buildBudgetedPrompt(inputs) {
     const cfg = loadConfig();
     const budget = cfg.judgeTokenBudget;
+    // Pre-check: instructions alone must fit in budget
+    if (estimateTokens(inputs.instructions) > budget) {
+        const err = Object.assign(new Error("E_BUDGET_TOO_SMALL: instructions alone exceed token budget"), { code: "E_BUDGET_TOO_SMALL" });
+        throw err;
+    }
     const hash = inventoryHash(inputs.inventory);
     // Try full mode
     const fullInv = inventorySummary(inputs.inventory, true);
@@ -97,7 +103,7 @@ export function buildBudgetedPrompt(inputs) {
         tokens = estimateTokens(prompt);
     }
     if (tokens <= budget)
-        return { prompt, mode: "full", tokens };
+        return { prompt, mode: kept.length === 0 ? "degraded" : "full", tokens };
     // Degrade to name-only
     let degradedKept = inputs.inventory;
     let degradedInv = inventorySummary(degradedKept, false);

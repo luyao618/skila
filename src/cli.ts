@@ -138,6 +138,11 @@ async function dispatch(argv: string[]): Promise<number> {
       await runServe({ port: portArg });
       return 0; // unreachable
     }
+    case "install-hooks": {
+      const { runInstallHooks } = await import("./commands/install-hooks.js");
+      runInstallHooks();
+      return 0;
+    }
     case "stats":
       process.stdout.write(`skila stats: not yet implemented (Phase 3+)\n`);
       return 0;
