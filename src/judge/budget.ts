@@ -99,9 +99,9 @@ export function buildBudgetedPrompt(inputs: BudgetInputs): BuiltPrompt {
   let prompt = `${inputs.instructions}\n\n## Inventory\n${fullInv}\n\n## Candidate\n${inputs.candidateBody}\n\n## Tool sequence (last 30)\n${inputs.toolTraceText}\n`;
   let tokens = estimateTokens(prompt);
   if (tokens <= budget) {
+    const alreadyCached = readInventoryCache(hash);
     writeInventoryCache(hash, fullInv);
-    const cached = readInventoryCache(hash);
-    return { prompt, mode: cached ? "cached" : "full", tokens };
+    return { prompt, mode: alreadyCached ? "cached" : "full", tokens };
   }
 
   // Truncate inventory first (drop oldest-touched)

@@ -70,8 +70,47 @@ function redact(s) {
 function maybeStr(v) {
     return typeof v === "string" ? redact(v) : undefined;
 }
+// Heuristic: infer skill name from a file path under a skills directory.
+// Handles paths like /.../skills/draft/<name>/SKILL.md → <name>.
+function inferSkillFromPath(filePath) {
+    if (typeof filePath !== "string")
+        return undefined;
+    const m = filePath.match(/[/\\]skills[/\\](?:draft|staging|published)[/\\]([^/\\]+)/);
+    if (m)
+        return m[1];
+    const m2 = filePath.match(/[/\\]skills[/\\]([^/\\]+)[/\\]/);
+    if (m2)
+        return m2[1];
+    return undefined;
+}
+/**
+ * FIX-C9: extract skill identifier from a Claude harness PostToolUse payload.
+ * Precedence: tool_input.skill_name → tool_input.skill → path heuristic on
+ * tool_input.path / tool_input.file_path → existing top-level skill field.
+ */
+export function extractSkillFromHarnessPayload(raw) {
+    if (!raw || typeof raw !== "object")
+        return undefined;
+    const r = raw;
+    const ti = (r.tool_input && typeof r.tool_input === "object")
+        ? r.tool_input
+        : null;
+    if (ti) {
+        if (typeof ti.skill_name === "string" && ti.skill_name)
+            return ti.skill_name;
+        if (typeof ti.skill === "string" && ti.skill)
+            return ti.skill;
+        const fromPath = inferSkillFromPath(ti.path ?? ti.file_path);
+        if (fromPath)
+            return fromPath;
+    }
+    if (typeof r.skill === "string" && r.skill)
+        return r.skill;
+    return undefined;
+}
 /**
  * FIX-M21: filter raw payload to only allowlisted fields, redacting strings.
+ * FIX-C9: also extracts skill from Claude harness tool_input fields.
  * This is the ONLY place untrusted hook input becomes a CollectFeedbackArgs.
  */
 export function sanitizeRawPayload(raw) {
@@ -85,10 +124,13 @@ export function sanitizeRawPayload(raw) {
     const validOutcome = (outcome === "success" || outcome === "failure" || outcome === "unknown")
         ? outcome
         : undefined;
+    // FIX-C9: extract skill from harness payload (tool_input.skill_name / skill / path).
+    const inferredSkill = extractSkillFromHarnessPayload(raw);
+    const skillStr = inferredSkill ? redact(inferredSkill) : maybeStr(r.skill);
     return {
         event: maybeStr(r.event),
         tool: maybeStr(r.tool),
-        skill: maybeStr(r.skill),
+        skill: skillStr,
         session: maybeStr(r.session),
         result: {
             success: typeof result.success === "boolean" ? result.success : undefined,
@@ -113,5 +155,10 @@ export function collectFeedback(args) {
 // then collect in one step so the hook cannot accidentally bypass redaction.
 export function collectFromHookPayload(raw) {
     collectFeedback(sanitizeRawPayload(raw));
+}
+// Drain all queued feedback items to disk. Called by the hook bridge before
+// process.exit so records are not lost when the process terminates.
+export async function drainFeedback() {
+    return drain();
 }
 //# sourceMappingURL=collector.js.map

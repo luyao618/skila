@@ -79,6 +79,16 @@ export async function getAdapter(): Promise<StorageAdapter> {
     return cached;
   }
 
+  // FIX-C6: If sentinel is absent but .git/ or versions/ exist in home,
+  // this is not a genuine first-run — refuse silently switching adapters.
+  if (existsSync(join(home, ".git")) || existsSync(join(home, "versions"))) {
+    throw new StorageAdapterError(
+      "E_ADAPTER_MISSING_SENTINEL",
+      `storage adapter sentinel missing but ${home} looks initialized (.git/ or versions/ present) — refusing first-run probe`,
+      "run `skila doctor --fix-storage` to reconcile"
+    );
+  }
+
   // SKILA_FORCE_ADAPTER=flat bypasses git probe (test isolation + no-git environments).
   if (process.env.SKILA_FORCE_ADAPTER === "flat") {
     const a = new FlatFileStorage();

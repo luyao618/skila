@@ -1,4 +1,5 @@
 // Distill prompt assembly (extractor side, not judge).
+// FIX-C3: user-controlled regions are XML-fenced to prevent injection.
 
 import type { DistillCandidate } from "../types.js";
 
@@ -13,13 +14,18 @@ export function buildExtractionPrompt(input: { sessionText: string; toolTraceTex
     EXTRACTION_PROMPT,
     "",
     "## Session",
+    "<candidate>",
     input.sessionText,
+    "</candidate>",
     "",
     "## Tool sequence",
-    input.toolTraceText
+    "<tool_trace>",
+    input.toolTraceText,
+    "</tool_trace>"
   ].join("\n");
 }
 
 export function summarizeCandidate(c: DistillCandidate): string {
   return `${c.name} — ${c.description}`;
 }
+
