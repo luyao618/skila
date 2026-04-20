@@ -21,8 +21,15 @@ import { join, dirname } from "node:path";
 import { StorageAdapterError } from "./types.js";
 import { ensureSkilaHome, statusDir } from "../config/config.js";
 import { atomicWriteFileSync } from "./atomic.js";
+import { assertValidName, assertValidVersion } from "./validate.js";
 const execFileP = promisify(execFile);
 const GIT_TIMEOUT_MS = 5000;
+// Standard -c flags to disable GPG signing and set identity for all commits.
+const GIT_COMMIT_FLAGS = [
+    "-c", "commit.gpgsign=false",
+    "-c", "user.email=skila@local",
+    "-c", "user.name=skila",
+];
 async function git(args, cwd) {
     try {
         const r = await execFileP("git", args, { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 });
@@ -39,6 +46,10 @@ async function git(args, cwd) {
         throw new StorageAdapterError("E_GIT", `git ${args.join(" ")} failed: ${msg.trim()}`);
     }
 }
+// Run a commit with the standard -c flags to suppress signing and set identity.
+async function gitCommit(args, cwd) {
+    return git([...GIT_COMMIT_FLAGS, "commit", ...args], cwd);
+}
 function repoRelPath(name, status) {
     return join("skills", status, name, "SKILL.md");
 }
@@ -53,6 +64,27 @@ function findLiveStatus(name) {
     }
     return undefined;
 }
+// Check if a git repo has any commits (i.e. HEAD resolves).
+async function hasAnyCommit(home) {
+    try {
+        await git(["rev-parse", "--verify", "HEAD"], home);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+// .gitignore content for sentinel / temp files.
+const GITIGNORE_CONTENT = [
+    "# skila sentinel and temp files — do not track",
+    ".adapter-mode",
+    ".write-probe",
+    ".*.tmp-*",
+    ".move-intent.json",
+    ".promote-*.lock",
+    ".skila-init",
+    "",
+].join("\n");
 export class GitBackedStorage {
     mode = "git";
     home;
@@ -64,30 +96,60 @@ export class GitBackedStorage {
         mkdirSync(home, { recursive: true });
         if (!existsSync(join(home, ".git"))) {
             await git(["init", "-q"], home);
-            await git(["config", "user.email", "skila@local"], home);
-            await git(["config", "user.name", "skila"], home);
+            // Write .gitignore for sentinel/temp files (FIX-M7).
+            atomicWriteFileSync(join(home, ".gitignore"), GITIGNORE_CONTENT);
+            await git(["add", "--", ".gitignore"], home);
             // initial commit so HEAD exists
             const seed = join(home, ".skila-init");
             atomicWriteFileSync(seed, `skila storage init ${new Date().toISOString()}\n`);
-            await git(["add", ".skila-init"], home);
-            await git(["commit", "-q", "-m", "skila: storage init"], home);
+            // Force-add .skila-init even though it's in .gitignore — it serves as a
+            // skila-repo marker for the foreign-repo guard (FIX-H8).
+            await git(["add", "-f", "--", ".skila-init"], home);
+            await gitCommit(["-q", "-m", "skila: storage init"], home);
+        }
+        else {
+            // FIX-H8: foreign-repo guard. If .git exists but was not created by skila,
+            // refuse with E_GIT_FOREIGN_REPO.
+            if (await hasAnyCommit(home)) {
+                // A skila repo always has at least one commit touching .skila-init.
+                const skilaLog = await git(["log", "--max-count=1", "--pretty=format:%H", "--", ".skila-init"], home);
+                if (!skilaLog.stdout.trim()) {
+                    throw new StorageAdapterError("E_GIT_FOREIGN_REPO", `git: ${home} contains a git repo not created by skila. ` +
+                        `Remove .git or use a dedicated skila home directory.`);
+                }
+            }
+            else {
+                // .git exists but no commits yet — this can happen when a test (or user)
+                // pre-initialises the git repo before skila runs. Bootstrap the skila
+                // sentinel files so foreign-repo checks pass on subsequent init() calls.
+                atomicWriteFileSync(join(home, ".gitignore"), GITIGNORE_CONTENT);
+                await git(["add", "--", ".gitignore"], home);
+                const seed = join(home, ".skila-init");
+                atomicWriteFileSync(seed, `skila storage init ${new Date().toISOString()}\n`);
+                await git(["add", "-f", "--", ".skila-init"], home);
+                await gitCommit(["-q", "-m", "skila: storage init"], home);
+            }
         }
     }
     async writeSkill(name, version, content, metadata) {
+        assertValidName(name);
+        assertValidVersion(version);
         await this.init();
         const rel = repoRelPath(name, metadata.status);
         const target = join(this.home, rel);
         mkdirSync(dirname(target), { recursive: true });
         atomicWriteFileSync(target, content);
         await git(["add", "--", rel], this.home);
+        // Tag format: [skill=<name> v<version>] (FIX-H9).
         // Allow empty-on-no-change commits so version history records the bump.
-        await git(["commit", "-q", "--allow-empty", "-m", `${metadata.message} [v${version}]`], this.home);
+        await gitCommit(["-q", "--allow-empty", "-m", `${metadata.message} [skill=${name} v${version}]`], this.home);
         // Mirror to live skill tree (atomic).
         const live = liveSkillPath(name, metadata.status);
         mkdirSync(dirname(live), { recursive: true });
         atomicWriteFileSync(live, content);
     }
     async moveSkill(name, fromStatus, toStatus) {
+        assertValidName(name);
         await this.init();
         const fromRel = repoRelPath(name, fromStatus);
         const toRel = repoRelPath(name, toStatus);
@@ -96,10 +158,11 @@ export class GitBackedStorage {
         if (existsSync(fromAbs)) {
             mkdirSync(dirname(toAbs), { recursive: true });
             try {
-                await git(["mv", fromRel, toRel], this.home);
+                // FIX-M17: add -- end-of-options before paths.
+                await git(["mv", "--", fromRel, toRel], this.home);
             }
             catch {
-                // non-tracked file — fall back to fs rename + add
+                // non-tracked file — fall back to fs rename + add, then rm source from index (FIX-H6)
                 try {
                     renameSync(fromAbs, toAbs);
                 }
@@ -107,8 +170,13 @@ export class GitBackedStorage {
                     copyFileSync(fromAbs, toAbs);
                 }
                 await git(["add", "--", toRel], this.home);
+                // Remove source from index (it may still be staged from a prior add).
+                try {
+                    await git(["rm", "--cached", "--", fromRel], this.home);
+                }
+                catch { /* not in index — ok */ }
             }
-            await git(["commit", "-q", "--allow-empty", "-m", `move ${name}: ${fromStatus}->${toStatus}`], this.home);
+            await gitCommit(["-q", "--allow-empty", "-m", `move ${name}: ${fromStatus}->${toStatus}`], this.home);
         }
         // Mirror live tree (delegate to a generic dir move via fs).
         const liveSrc = join(statusDir(fromStatus), name);
@@ -131,6 +199,7 @@ export class GitBackedStorage {
         }
     }
     async readSkill(name, status) {
+        assertValidName(name);
         const live = liveSkillPath(name, status);
         if (existsSync(live))
             return readFileSync(live, "utf8");
@@ -140,30 +209,41 @@ export class GitBackedStorage {
         throw new StorageAdapterError("E_NOT_FOUND", `git: skill ${name} not found in status=${status}`);
     }
     async getVersion(name, version) {
+        assertValidName(name);
+        assertValidVersion(version);
         await this.init();
-        // Find a commit whose subject contains "[v<version>]" and read the file from that ref.
-        const log = await git(["log", "--all", "--pretty=format:%H|%s"], this.home);
-        const lines = log.stdout.split("\n").filter(Boolean);
-        const tag = `[v${version}]`;
-        for (const line of lines) {
-            const idx = line.indexOf("|");
-            const sha = line.slice(0, idx);
-            const subject = line.slice(idx + 1);
-            if (!subject.includes(tag))
+        // FIX-H9: filter by path (repoRelPath) AND tag, prefer most recent.
+        // Support both new tag format [skill=<name> v<version>] and legacy [v<version>].
+        const newTag = `[skill=${name} v${version}]`;
+        const legacyTag = `[v${version}]`;
+        for (const s of ["published", "staging", "draft", "archived", "disabled"]) {
+            const rel = repoRelPath(name, s);
+            let log;
+            try {
+                // Use path-specific log so only commits touching this exact file are considered.
+                log = await git(["log", "--all", "--pretty=format:%H|%s", "--", rel], this.home);
+            }
+            catch {
                 continue;
-            // Find which status path holds this version at that sha.
-            for (const s of ["published", "staging", "draft", "archived", "disabled"]) {
-                const rel = repoRelPath(name, s);
+            }
+            const lines = log.stdout.split("\n").filter(Boolean);
+            for (const line of lines) {
+                const idx = line.indexOf("|");
+                const sha = line.slice(0, idx);
+                const subject = line.slice(idx + 1);
+                if (!subject.includes(newTag) && !subject.includes(legacyTag))
+                    continue;
                 try {
                     const r = await git(["show", `${sha}:${rel}`], this.home);
                     return r.stdout;
                 }
-                catch { /* try next status */ }
+                catch { /* try next */ }
             }
         }
         throw new StorageAdapterError("E_NOT_FOUND", `git: version v${version} not found for ${name}`);
     }
     async listVersions(name) {
+        assertValidName(name);
         await this.init();
         // Collect commits touching any status path for this skill.
         const out = [];
@@ -184,7 +264,8 @@ export class GitBackedStorage {
                 const sha = parts[0];
                 const date = parts[1];
                 const message = parts.slice(2).join("|");
-                const m = message.match(/\[v(\d+\.\d+\.\d+)\]/);
+                // Support new tag format [skill=<name> v<version>] and legacy [v<version>].
+                const m = message.match(/\[skill=\S+ v(\d+\.\d+\.\d+)\]/) || message.match(/\[v(\d+\.\d+\.\d+)\]/);
                 const version = m ? m[1] : sha.slice(0, 7);
                 const key = `${version}:${sha}`;
                 if (seen.has(key))
@@ -196,17 +277,21 @@ export class GitBackedStorage {
         return out;
     }
     async diff(name, from, to) {
+        assertValidName(name);
+        assertValidVersion(from);
+        assertValidVersion(to);
         await this.init();
         // Resolve to commit SHAs by scanning version-tagged commits.
         const log = await git(["log", "--all", "--pretty=format:%H|%s"], this.home);
         const lines = log.stdout.split("\n").filter(Boolean);
         const findSha = (v) => {
-            const tag = `[v${v}]`;
+            const newTag = `[skill=${name} v${v}]`;
+            const legacyTag = `[v${v}]`;
             for (const line of lines) {
                 const idx = line.indexOf("|");
                 const sha = line.slice(0, idx);
                 const subject = line.slice(idx + 1);
-                if (subject.includes(tag))
+                if (subject.includes(newTag) || subject.includes(legacyTag))
                     return sha;
             }
             return undefined;

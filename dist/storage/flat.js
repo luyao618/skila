@@ -8,6 +8,7 @@ import { join, dirname } from "node:path";
 import { StorageAdapterError } from "./types.js";
 import { ensureSkilaHome, statusDir } from "../config/config.js";
 import { atomicWriteFileSync } from "./atomic.js";
+import { assertValidName, assertValidVersion } from "./validate.js";
 const execFileP = promisify(execFile);
 function skillPath(name, status) {
     return join(statusDir(status), name, "SKILL.md");
@@ -35,6 +36,8 @@ export class FlatFileStorage {
         mkdirSync(join(ensureSkilaHome(), "versions"), { recursive: true });
     }
     async writeSkill(name, version, content, metadata) {
+        assertValidName(name);
+        assertValidVersion(version);
         // 1. Snapshot to versions/<name>/v<version>/
         const { dir, file, meta } = versionPath(name, version);
         mkdirSync(dir, { recursive: true });
@@ -51,6 +54,7 @@ export class FlatFileStorage {
         atomicWriteFileSync(live, content);
     }
     async moveSkill(name, _fromStatus, toStatus) {
+        assertValidName(name);
         const located = findSkillPathAnyStatus(name);
         if (!located)
             throw new StorageAdapterError("E_NOT_FOUND", `flat: skill not found: ${name}`);
@@ -76,18 +80,22 @@ export class FlatFileStorage {
         }
     }
     async readSkill(name, status) {
+        assertValidName(name);
         const file = skillPath(name, status);
         if (!existsSync(file))
             throw new StorageAdapterError("E_NOT_FOUND", `flat: ${file} missing`);
         return readFileSync(file, "utf8");
     }
     async getVersion(name, version) {
+        assertValidName(name);
+        assertValidVersion(version);
         const { file } = versionPath(name, version);
         if (!existsSync(file))
             throw new StorageAdapterError("E_NOT_FOUND", `flat: version v${version} missing for ${name}`);
         return readFileSync(file, "utf8");
     }
     async listVersions(name) {
+        assertValidName(name);
         const root = versionsDir(name);
         if (!existsSync(root))
             return [];
@@ -114,10 +122,13 @@ export class FlatFileStorage {
             }
             out.push({ version, date, message });
         }
-        out.sort((a, b) => (a.date < b.date ? 1 : -1));
+        out.sort((a, b) => compareSemver(b.version, a.version));
         return out;
     }
     async diff(name, from, to) {
+        assertValidName(name);
+        assertValidVersion(from);
+        assertValidVersion(to);
         const a = versionPath(name, from).file;
         const b = versionPath(name, to).file;
         if (!existsSync(a) || !existsSync(b)) {
@@ -136,6 +147,12 @@ export class FlatFileStorage {
         }
     }
 }
+function compareSemver(a, b) {
+    const parse = (s) => s.split(".").map((x) => parseInt(x, 10) || 0);
+    const [aMaj, aMin, aPat] = parse(a);
+    const [bMaj, bMin, bPat] = parse(b);
+    return aMaj !== bMaj ? aMaj - bMaj : aMin !== bMin ? aMin - bMin : aPat - bPat;
+}
 function copyDirRecursive(src, dst) {
     mkdirSync(dst, { recursive: true });
     for (const entry of readdirSync(src)) {
@@ -151,17 +168,99 @@ function copyDirRecursive(src, dst) {
 function manualUnifiedDiff(a, b, aLabel, bLabel) {
     const ax = a.split(/\r?\n/);
     const bx = b.split(/\r?\n/);
+    // Remove trailing empty string from split if file ends with newline
+    if (ax[ax.length - 1] === "")
+        ax.pop();
+    if (bx[bx.length - 1] === "")
+        bx.pop();
     const out = [];
     out.push(`--- ${aLabel}`);
     out.push(`+++ ${bLabel}`);
-    const max = Math.max(ax.length, bx.length);
-    for (let i = 0; i < max; i++) {
-        if (ax[i] === bx[i])
+    // Build a simple diff: find ranges of differing lines and emit hunks
+    const CONTEXT = 3;
+    const changes = [];
+    let i = 0, j = 0;
+    while (i < ax.length || j < bx.length) {
+        if (i < ax.length && j < bx.length && ax[i] === bx[j]) {
+            i++;
+            j++;
             continue;
-        if (ax[i] !== undefined)
-            out.push(`-${ax[i]}`);
-        if (bx[i] !== undefined)
-            out.push(`+${bx[i]}`);
+        }
+        const aStart = i, bStart = j;
+        // advance until lines match again (simple O(n^2) ok for our small diffs)
+        let found = false;
+        for (let lookahead = 1; lookahead < Math.max(ax.length, bx.length) - Math.max(i, j) + 2; lookahead++) {
+            for (let di = 0; di <= lookahead; di++) {
+                const dj = lookahead - di;
+                if (i + di < ax.length && j + dj < bx.length && ax[i + di] === bx[j + dj]) {
+                    changes.push({ aStart, aEnd: i + di, bStart, bEnd: j + dj });
+                    i += di;
+                    j += dj;
+                    found = true;
+                    break;
+                }
+            }
+            if (found)
+                break;
+        }
+        if (!found) {
+            // remaining lines all differ
+            changes.push({ aStart, aEnd: ax.length, bStart, bEnd: bx.length });
+            break;
+        }
+    }
+    if (changes.length === 0)
+        return out.join("\n") + "\n";
+    // Merge nearby changes into hunks
+    const hunks = [];
+    for (const ch of changes) {
+        const hunkAStart = Math.max(0, ch.aStart - CONTEXT);
+        const hunkBStart = Math.max(0, ch.bStart - CONTEXT);
+        const hunkAEnd = Math.min(ax.length, ch.aEnd + CONTEXT);
+        const hunkBEnd = Math.min(bx.length, ch.bEnd + CONTEXT);
+        if (hunks.length > 0) {
+            const last = hunks[hunks.length - 1];
+            if (hunkAStart <= last.aEnd) {
+                last.aEnd = Math.max(last.aEnd, hunkAEnd);
+                last.bEnd = Math.max(last.bEnd, hunkBEnd);
+                continue;
+            }
+        }
+        hunks.push({ aStart: hunkAStart, aEnd: hunkAEnd, bStart: hunkBStart, bEnd: hunkBEnd });
+    }
+    for (const hunk of hunks) {
+        // Compute hunk contents
+        const hunkLines = [];
+        let ai = hunk.aStart, bi = hunk.bStart;
+        while (ai < hunk.aEnd || bi < hunk.bEnd) {
+            if (ai < hunk.aEnd && bi < hunk.bEnd && ax[ai] === bx[bi]) {
+                hunkLines.push(` ${ax[ai]}`);
+                ai++;
+                bi++;
+            }
+            else {
+                // emit removes then adds until lines sync
+                const syncAi = changes.find(c => c.aEnd > ai && c.aStart <= ai);
+                const syncBi = changes.find(c => c.bEnd > bi && c.bStart <= bi);
+                if (ai < (syncAi?.aEnd ?? hunk.aEnd)) {
+                    hunkLines.push(`-${ax[ai]}`);
+                    ai++;
+                }
+                else if (bi < (syncBi?.bEnd ?? hunk.bEnd)) {
+                    hunkLines.push(`+${bx[bi]}`);
+                    bi++;
+                }
+                else {
+                    hunkLines.push(` ${ax[ai]}`);
+                    ai++;
+                    bi++;
+                }
+            }
+        }
+        const aCount = hunkLines.filter(l => l[0] !== "+").length;
+        const bCount = hunkLines.filter(l => l[0] !== "-").length;
+        out.push(`@@ -${hunk.aStart + 1},${aCount} +${hunk.bStart + 1},${bCount} @@`);
+        out.push(...hunkLines);
     }
     return out.join("\n") + "\n";
 }

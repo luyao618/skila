@@ -6,11 +6,12 @@
 //   `skila doctor --fix-storage`.
 // - Logs adapter selection ONCE per process.
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { ensureSkilaHome, skilaHome } from "../config/config.js";
-import type { StorageAdapter } from "./types.js";
+import type { StorageAdapter, WriteSkillMetadata, VersionRecord } from "./types.js";
 import { StorageAdapterError } from "./types.js";
+import type { SkillStatus } from "../types.js";
 import { GitBackedStorage, isGitAvailable } from "./git.js";
 import { FlatFileStorage } from "./flat.js";
 
@@ -76,6 +77,7 @@ export async function getAdapter(): Promise<StorageAdapter> {
       cached = a;
     }
     logSelection(cached.mode);
+    await recoverMoveIntent(cached, home);
     return cached;
   }
 
@@ -96,6 +98,7 @@ export async function getAdapter(): Promise<StorageAdapter> {
     cached = a;
     writeSentinel(home, "flat");
     logSelection(cached.mode);
+    await recoverMoveIntent(cached, home);
     return cached;
   }
 
@@ -123,5 +126,80 @@ export async function getAdapter(): Promise<StorageAdapter> {
     writeSentinel(home, "flat");
   }
   logSelection(cached.mode);
+  await recoverMoveIntent(cached, home);
   return cached;
 }
+
+// ─── FIX-H7: Write-ahead intent log for moveSkill ───────────────────────────
+// Before any two-phase move we write .move-intent.json. On adapter init, if the
+// file exists we complete or rollback the partial move and delete it.
+
+export interface MoveIntent {
+  name: string;
+  fromStatus: SkillStatus;
+  toStatus: SkillStatus;
+  ts: string;
+}
+
+export function moveIntentPath(home?: string): string {
+  return join(home ?? skilaHome(), ".move-intent.json");
+}
+
+function writeMoveIntent(intent: MoveIntent): void {
+  const home = skilaHome();
+  writeFileSync(moveIntentPath(home), JSON.stringify(intent, null, 2));
+}
+
+function clearMoveIntent(): void {
+  const p = moveIntentPath();
+  try { if (existsSync(p)) unlinkSync(p); } catch {}
+}
+
+export function readMoveIntent(home?: string): MoveIntent | undefined {
+  const p = moveIntentPath(home);
+  if (!existsSync(p)) return undefined;
+  try {
+    return JSON.parse(readFileSync(p, "utf8")) as MoveIntent;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Wraps adapter.moveSkill with write-ahead intent logging (FIX-H7).
+ * Call this instead of adapter.moveSkill directly.
+ */
+export async function moveSkillWithIntentLog(
+  adapter: StorageAdapter,
+  name: string,
+  fromStatus: SkillStatus,
+  toStatus: SkillStatus
+): Promise<void> {
+  // Write intent before any mutation.
+  writeMoveIntent({ name, fromStatus, toStatus, ts: new Date().toISOString() });
+  try {
+    await adapter.moveSkill(name, fromStatus, toStatus);
+  } catch (err) {
+    // Move failed — leave intent file so recovery can retry on next init.
+    throw err;
+  }
+  // Success — clear the intent.
+  clearMoveIntent();
+}
+
+/**
+ * On adapter startup, replay any partial move intent.
+ * If the move already completed (fromStatus dir gone / toStatus dir present), just clear.
+ * Otherwise retry the move.
+ */
+export async function recoverMoveIntent(adapter: StorageAdapter, home?: string): Promise<void> {
+  const intent = readMoveIntent(home);
+  if (!intent) return;
+  try {
+    await adapter.moveSkill(intent.name, intent.fromStatus, intent.toStatus);
+  } catch {
+    // Ignore errors during recovery (e.g. E_NOT_FOUND if already completed).
+  }
+  clearMoveIntent();
+}
+

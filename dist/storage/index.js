@@ -5,7 +5,7 @@
 //   .git/ is missing (or vice versa), throws with hint pointing at
 //   `skila doctor --fix-storage`.
 // - Logs adapter selection ONCE per process.
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { ensureSkilaHome, skilaHome } from "../config/config.js";
 import { StorageAdapterError } from "./types.js";
@@ -63,6 +63,7 @@ export async function getAdapter() {
             cached = a;
         }
         logSelection(cached.mode);
+        await recoverMoveIntent(cached, home);
         return cached;
     }
     // FIX-C6: If sentinel is absent but .git/ or versions/ exist in home,
@@ -77,6 +78,7 @@ export async function getAdapter() {
         cached = a;
         writeSentinel(home, "flat");
         logSelection(cached.mode);
+        await recoverMoveIntent(cached, home);
         return cached;
     }
     // No sentinel — first run. Probe.
@@ -110,6 +112,67 @@ export async function getAdapter() {
         writeSentinel(home, "flat");
     }
     logSelection(cached.mode);
+    await recoverMoveIntent(cached, home);
     return cached;
+}
+export function moveIntentPath(home) {
+    return join(home ?? skilaHome(), ".move-intent.json");
+}
+function writeMoveIntent(intent) {
+    const home = skilaHome();
+    writeFileSync(moveIntentPath(home), JSON.stringify(intent, null, 2));
+}
+function clearMoveIntent() {
+    const p = moveIntentPath();
+    try {
+        if (existsSync(p))
+            unlinkSync(p);
+    }
+    catch { }
+}
+export function readMoveIntent(home) {
+    const p = moveIntentPath(home);
+    if (!existsSync(p))
+        return undefined;
+    try {
+        return JSON.parse(readFileSync(p, "utf8"));
+    }
+    catch {
+        return undefined;
+    }
+}
+/**
+ * Wraps adapter.moveSkill with write-ahead intent logging (FIX-H7).
+ * Call this instead of adapter.moveSkill directly.
+ */
+export async function moveSkillWithIntentLog(adapter, name, fromStatus, toStatus) {
+    // Write intent before any mutation.
+    writeMoveIntent({ name, fromStatus, toStatus, ts: new Date().toISOString() });
+    try {
+        await adapter.moveSkill(name, fromStatus, toStatus);
+    }
+    catch (err) {
+        // Move failed — leave intent file so recovery can retry on next init.
+        throw err;
+    }
+    // Success — clear the intent.
+    clearMoveIntent();
+}
+/**
+ * On adapter startup, replay any partial move intent.
+ * If the move already completed (fromStatus dir gone / toStatus dir present), just clear.
+ * Otherwise retry the move.
+ */
+export async function recoverMoveIntent(adapter, home) {
+    const intent = readMoveIntent(home);
+    if (!intent)
+        return;
+    try {
+        await adapter.moveSkill(intent.name, intent.fromStatus, intent.toStatus);
+    }
+    catch {
+        // Ignore errors during recovery (e.g. E_NOT_FOUND if already completed).
+    }
+    clearMoveIntent();
 }
 //# sourceMappingURL=index.js.map

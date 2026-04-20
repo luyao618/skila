@@ -177,8 +177,8 @@
     },
     {
       "path": "src/storage/atomic.ts",
-      "accessCount": 12,
-      "lastAccessed": 1776668067013,
+      "accessCount": 13,
+      "lastAccessed": 1776669804714,
       "type": "file"
     },
     {
@@ -197,6 +197,12 @@
       "path": ".claude-plugin/plugin.json",
       "accessCount": 9,
       "lastAccessed": 1776664941652,
+      "type": "file"
+    },
+    {
+      "path": "src/config/config.ts",
+      "accessCount": 9,
+      "lastAccessed": 1776670057766,
       "type": "file"
     },
     {
@@ -224,10 +230,10 @@
       "type": "file"
     },
     {
-      "path": "src/config/config.ts",
-      "accessCount": 6,
-      "lastAccessed": 1776667446077,
-      "type": "file"
+      "path": "",
+      "accessCount": 7,
+      "lastAccessed": 1776668521038,
+      "type": "directory"
     },
     {
       "path": "smithery.yaml",
@@ -246,12 +252,6 @@
       "accessCount": 4,
       "lastAccessed": 1776579331425,
       "type": "file"
-    },
-    {
-      "path": "",
-      "accessCount": 4,
-      "lastAccessed": 1776667000102,
-      "type": "directory"
     },
     {
       "path": "skills/skila/scripts/validate_skill.py",

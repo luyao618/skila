@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-04-20T06:55:58.680Z",
+  "updatedAt": "2026-04-20T07:35:17.963Z",
   "missions": [
     {
       "id": "session:28f88d33-65b0-4c76-a6cb-f4d420e587bd:none",
@@ -161,15 +161,15 @@
       "name": "none",
       "objective": "Session mission",
       "createdAt": "2026-04-20T06:36:17.007Z",
-      "updatedAt": "2026-04-20T06:55:58.680Z",
+      "updatedAt": "2026-04-20T07:35:17.963Z",
       "status": "done",
-      "workerCount": 8,
+      "workerCount": 17,
       "taskCounts": {
-        "total": 8,
+        "total": 17,
         "pending": 0,
         "blocked": 0,
         "inProgress": 0,
-        "completed": 8,
+        "completed": 17,
         "failed": 0
       },
       "agents": [
@@ -181,7 +181,7 @@
           "currentStep": null,
           "latestUpdate": "completed",
           "completedSummary": null,
-          "updatedAt": "2026-04-20T06:40:02.668Z"
+          "updatedAt": "2026-04-20T07:09:51.045Z"
         },
         {
           "name": "worker-feedback:a4d0ff4",
@@ -252,40 +252,146 @@
           "latestUpdate": "completed",
           "completedSummary": null,
           "updatedAt": "2026-04-20T06:55:58.680Z"
+        },
+        {
+          "name": "worker-flat-and-frontmatter:a01ef90",
+          "role": "worker-flat-and-frontmatter",
+          "ownership": "a01ef9025a2d5ffbc",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-20T07:05:50.168Z"
+        },
+        {
+          "name": "worker-git:aecbf97",
+          "role": "worker-git",
+          "ownership": "aecbf970f84c18e76",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-20T07:06:29.305Z"
+        },
+        {
+          "name": "worker-scanner-and-move:a88bdf6",
+          "role": "worker-scanner-and-move",
+          "ownership": "a88bdf6ac55bd9138",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-20T07:03:54.806Z"
+        },
+        {
+          "name": "worker-scanner-and-move:afb8c4d",
+          "role": "worker-scanner-and-move",
+          "ownership": "afb8c4d26fc58e481",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-20T07:12:56.591Z"
+        },
+        {
+          "name": "debugger:a1140bb",
+          "role": "debugger",
+          "ownership": "a1140bb4321d856cd",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-20T07:28:06.971Z"
+        },
+        {
+          "name": "code-reviewer:a378b4a",
+          "role": "code-reviewer",
+          "ownership": "a378b4a3384a73a3f",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-20T07:32:23.358Z"
+        },
+        {
+          "name": "worker-git:a5c31e1",
+          "role": "worker-git",
+          "ownership": "a5c31e19034347413",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-20T07:35:12.655Z"
+        },
+        {
+          "name": "worker-flat-and-frontmatter:aaaf8e7",
+          "role": "worker-flat-and-frontmatter",
+          "ownership": "aaaf8e7358979f732",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-20T07:35:15.042Z"
+        },
+        {
+          "name": "worker-scanner-and-move:aa06b77",
+          "role": "worker-scanner-and-move",
+          "ownership": "aa06b77860891f95c",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-20T07:35:17.963Z"
         }
       ],
       "timeline": [
         {
-          "id": "session-stop:a2f91f2dea8516618:2026-04-20T06:52:43.967Z",
-          "at": "2026-04-20T06:52:43.967Z",
-          "kind": "completion",
-          "agent": "worker-storage:a2f91f2",
-          "detail": "completed",
-          "sourceKey": "session-stop:a2f91f2dea8516618"
-        },
-        {
-          "id": "session-stop:a47e0252bc5626a25:2026-04-20T06:52:45.051Z",
-          "at": "2026-04-20T06:52:45.051Z",
-          "kind": "completion",
-          "agent": "worker-feedback:a47e025",
-          "detail": "completed",
-          "sourceKey": "session-stop:a47e0252bc5626a25"
-        },
-        {
-          "id": "session-start:a65243b5910241c97:2026-04-20T06:54:00.081Z",
-          "at": "2026-04-20T06:54:00.081Z",
+          "id": "session-start:a5c31e19034347413:2026-04-20T07:35:07.512Z",
+          "at": "2026-04-20T07:35:07.512Z",
           "kind": "update",
-          "agent": "verifier:a65243b",
-          "detail": "started verifier:a65243b",
-          "sourceKey": "session-start:a65243b5910241c97"
+          "agent": "worker-git:a5c31e1",
+          "detail": "started worker-git:a5c31e1",
+          "sourceKey": "session-start:a5c31e19034347413"
         },
         {
-          "id": "session-stop:a65243b5910241c97:2026-04-20T06:55:58.680Z",
-          "at": "2026-04-20T06:55:58.680Z",
+          "id": "session-start:aaaf8e7358979f732:2026-04-20T07:35:09.034Z",
+          "at": "2026-04-20T07:35:09.034Z",
+          "kind": "update",
+          "agent": "worker-flat-and-frontmatter:aaaf8e7",
+          "detail": "started worker-flat-and-frontmatter:aaaf8e7",
+          "sourceKey": "session-start:aaaf8e7358979f732"
+        },
+        {
+          "id": "session-start:aa06b77860891f95c:2026-04-20T07:35:10.033Z",
+          "at": "2026-04-20T07:35:10.033Z",
+          "kind": "update",
+          "agent": "worker-scanner-and-move:aa06b77",
+          "detail": "started worker-scanner-and-move:aa06b77",
+          "sourceKey": "session-start:aa06b77860891f95c"
+        },
+        {
+          "id": "session-stop:a5c31e19034347413:2026-04-20T07:35:12.655Z",
+          "at": "2026-04-20T07:35:12.655Z",
           "kind": "completion",
-          "agent": "verifier:a65243b",
+          "agent": "worker-git:a5c31e1",
           "detail": "completed",
-          "sourceKey": "session-stop:a65243b5910241c97"
+          "sourceKey": "session-stop:a5c31e19034347413"
+        },
+        {
+          "id": "session-stop:aaaf8e7358979f732:2026-04-20T07:35:15.042Z",
+          "at": "2026-04-20T07:35:15.042Z",
+          "kind": "completion",
+          "agent": "worker-flat-and-frontmatter:aaaf8e7",
+          "detail": "completed",
+          "sourceKey": "session-stop:aaaf8e7358979f732"
+        },
+        {
+          "id": "session-stop:aa06b77860891f95c:2026-04-20T07:35:17.963Z",
+          "at": "2026-04-20T07:35:17.963Z",
+          "kind": "completion",
+          "agent": "worker-scanner-and-move:aa06b77",
+          "detail": "completed",
+          "sourceKey": "session-stop:aa06b77860891f95c"
         }
       ]
     }
