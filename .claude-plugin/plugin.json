@@ -14,12 +14,6 @@
     "evolution",
     "claude-code"
   ],
-  "commands": [
-    {
-      "name": "skila",
-      "description": "Distill the current session into a NEW or UPDATE skill proposal."
-    }
-  ],
   "hooks": {
     "PostToolUse": [
       {
