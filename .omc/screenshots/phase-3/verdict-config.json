@@ -1,0 +1,11 @@
+{
+  "reference": "Obsidian + GitHub high-density workspace, dark mode, monospace editor, cool-grey neutrals. Yellow for staging, blue for published, grey for archived/disabled. No excessive padding. High information density.",
+  "screenshots": [
+    "/Users/yao/work/code/personal/skila/.omc/screenshots/phase-3/dashboard.png",
+    "/Users/yao/work/code/personal/skila/.omc/screenshots/phase-3/skill-list.png",
+    "/Users/yao/work/code/personal/skila/.omc/screenshots/phase-3/skill-detail.png",
+    "/Users/yao/work/code/personal/skila/.omc/screenshots/phase-3/diff-view.png"
+  ],
+  "threshold": 7,
+  "skillName": "skila web control panel (Phase 3)"
+}

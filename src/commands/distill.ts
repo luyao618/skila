@@ -8,6 +8,7 @@ import type { DistillCandidate, SkillProposal, WarningRecord, JudgeOutput, Skill
 import { extractCandidateFromFixture } from "../distill/extractor.js";
 import { scanInventory, findSkill } from "../inventory/scanner.js";
 import { callJudge } from "../judge/judge.js";
+import { sanitizeJustification } from "../judge/prompt.js";
 import { statusDir } from "../config/config.js";
 import { validateSkillContent } from "../validate/validate.js";
 import { writeSkillFile, bumpVersion, appendChangelog } from "./_lifecycle.js";
@@ -34,7 +35,14 @@ export async function runDistill(opts: DistillOptions): Promise<DistillResult> {
   let mode: "NEW" | "UPDATE" = output.decision;
   let target = output.target_name ?? undefined;
 
-  // Hallucination guard
+  // Hallucination guard: UPDATE with empty/blank target_name — reject, do not coerce
+  if (mode === "UPDATE" && !target?.trim()) {
+    warnings.push({ type: "judge_hallucination", proposed: target ?? "", detail: "update_without_target: judge proposed UPDATE but target_name is empty" });
+    process.stderr.write(`skila distill: judge proposed UPDATE but target_name is empty — rejected\n`);
+    return { proposal: { name: candidate.name, mode: "NEW", newVersion: "0.1.0", body: candidate.body, description: candidate.description, changelogEntry: `Initial draft from session ${candidate.sessionId ?? "(unknown)"}`, warnings }, judgeOutput: output, warnings };
+  }
+
+  // Hallucination guard: UPDATE target not in inventory
   if (mode === "UPDATE" && target && !findSkill(target)) {
     warnings.push({ type: "judge_hallucination", proposed: target, detail: `judge proposed UPDATE→${target} but ${target} not found` });
     // log
@@ -56,7 +64,7 @@ export async function runDistill(opts: DistillOptions): Promise<DistillResult> {
       newVersion,
       body: candidate.body,
       description: candidate.description,
-      changelogEntry: `Revised from session ${candidate.sessionId ?? "(unknown)"}: ${output.justification}`,
+      changelogEntry: `Revised from session ${candidate.sessionId ?? "(unknown)"}: ${sanitizeJustification(output.justification)}`,
       warnings
     };
   } else {

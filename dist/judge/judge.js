@@ -24,23 +24,32 @@ function fixtureResponseFor(candidate) {
     }
     return null;
 }
+const UPDATE_SIMILARITY_THRESHOLD = 0.4; // minimum overlap score to classify as UPDATE
 function deterministicHeuristic(candidate, inventory) {
-    // Match candidate name/desc tokens vs inventory.
-    const tokens = (candidate.name + " " + candidate.description + " " + candidate.body).toLowerCase();
+    // Tokenize candidate: split on non-word chars, lowercase, full-token equality (not substring).
+    const candTokens = new Set((candidate.name + " " + candidate.description + " " + candidate.body)
+        .toLowerCase()
+        .split(/\W+/)
+        .filter(Boolean));
     let best = null;
     for (const sk of inventory) {
         const inv = (sk.name + " " + (sk.frontmatter.description ?? "")).toLowerCase();
-        const invTokens = inv.split(/\W+/).filter(Boolean);
+        const invTokens = new Set(inv.split(/\W+/).filter(Boolean));
+        if (invTokens.size === 0) {
+            if (!best || 0 > best.score)
+                best = { name: sk.name, score: 0 };
+            continue;
+        }
         let hits = 0;
         for (const t of invTokens) {
-            if (t.length >= 4 && tokens.includes(t))
+            if (t.length >= 4 && candTokens.has(t))
                 hits++;
         }
-        const score = invTokens.length === 0 ? 0 : hits / invTokens.length;
+        const score = hits / Math.max(invTokens.size, 1);
         if (!best || score > best.score)
             best = { name: sk.name, score };
     }
-    if (best && best.score >= 0.4) {
+    if (best && best.score >= UPDATE_SIMILARITY_THRESHOLD) {
         return {
             decision: "UPDATE",
             target_name: best.name,
@@ -59,11 +68,13 @@ function deterministicHeuristic(candidate, inventory) {
 }
 export async function callJudge(args) {
     const { fullPrompt } = buildJudgePrompt(args);
-    // Mock-mode: prefer fixture responses, fall back to heuristic.
+    // Mock-mode: prefer fixture responses (only when SKILA_JUDGE_FIXTURE=1), fall back to heuristic.
     if (process.env.JUDGE_LIVE !== "1") {
-        const fix = fixtureResponseFor(args.candidate);
-        if (fix)
-            return { output: fix, promptUsed: fullPrompt };
+        if (process.env.SKILA_JUDGE_FIXTURE === "1") {
+            const fix = fixtureResponseFor(args.candidate);
+            if (fix)
+                return { output: fix, promptUsed: fullPrompt };
+        }
         return { output: deterministicHeuristic(args.candidate, args.inventory), promptUsed: fullPrompt };
     }
     // Live path: TODO when ANTHROPIC_API_KEY present. For Phase 2 we stub.

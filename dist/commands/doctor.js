@@ -11,6 +11,7 @@
 // chronological commits (or vice versa exports git → flat dirs).
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, mkdirSync, rmSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createServer } from "node:http";
@@ -62,9 +63,10 @@ function checkSkillsWritable() {
 }
 function checkPluginJson() {
     // Resolve relative to package root (../../ from dist/commands or src/commands).
+    const repoRoot = resolve(__dirnameSafe(), "..", "..");
     const candidates = [
         resolve(process.cwd(), ".claude-plugin/plugin.json"),
-        resolve(__dirnameSafe(), "..", "..", ".claude-plugin", "plugin.json")
+        resolve(repoRoot, ".claude-plugin", "plugin.json")
     ];
     for (const p of candidates) {
         if (!existsSync(p))
@@ -73,9 +75,12 @@ function checkPluginJson() {
             const j = JSON.parse(readFileSync(p, "utf8"));
             const hooks = (j.hooks ?? []);
             for (const h of hooks) {
-                const target = h.source ?? h.command ?? "";
+                let target = h.source ?? h.command ?? "";
                 if (typeof target !== "string" || !target)
                     continue;
+                // Substitute ${CLAUDE_PLUGIN_ROOT} with repoRoot (or env override).
+                const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT ?? repoRoot;
+                target = target.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginRoot);
                 const resolved = resolve(dirname(p), target.replace(/^\.\//, ""));
                 if (!existsSync(resolved)) {
                     return { name: "plugin.json hook resolution", ok: false, detail: `hook missing: ${target}` };
@@ -90,12 +95,11 @@ function checkPluginJson() {
     return { name: "plugin.json hook resolution", ok: true, detail: "plugin.json absent (skipped)" };
 }
 function __dirnameSafe() {
-    // ESM-safe dirname.
+    // ESM-safe dirname using fileURLToPath (handles Windows drive letters correctly).
     try {
         const url = import.meta.url;
         if (url) {
-            const u = new URL(url);
-            return dirname(u.pathname);
+            return dirname(fileURLToPath(url));
         }
     }
     catch { /* fall through */ }
@@ -106,7 +110,7 @@ async function checkPort(port = 7777) {
         const srv = createServer();
         srv.once("error", (err) => {
             if (err.code === "EADDRINUSE")
-                resolveP({ name: `port ${port}`, ok: false, detail: "in use" });
+                resolveP({ name: `port ${port}`, ok: true, detail: "in use (serve auto-increments, informational)" });
             else
                 resolveP({ name: `port ${port}`, ok: false, detail: err.message });
         });

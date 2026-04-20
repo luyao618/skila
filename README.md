@@ -40,6 +40,7 @@ Smithery deploys it as an ephemeral, read-only MCP server (mutation commands are
 skila serve                    # open the web control panel on http://127.0.0.1:7777
 skila list                     # list skills grouped by status
 skila inspect <name>           # show a skill (optionally --version v0.X.Y)
+skila install-hooks            # (npm -g installs) merge PostToolUse+Stop hooks into ~/.claude/settings.json
 ```
 
 ## Web control panel

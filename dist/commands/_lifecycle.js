@@ -57,7 +57,27 @@ export async function moveSkillDir(skill, newStatus) {
         status: newStatus,
         lastImprovedAt: new Date().toISOString(),
     };
-    writeSidecar(skillFile, sidecar);
+    try {
+        writeSidecar(skillFile, sidecar);
+    }
+    catch (writeErr) {
+        // Roll back the directory move so FS state is consistent on failure.
+        try {
+            renameSync(destDir, srcDir);
+        }
+        catch {
+            try {
+                copyDirRecursive(destDir, srcDir);
+                rmDir(destDir);
+            }
+            catch { /* best effort */ }
+        }
+        const e = writeErr;
+        const ctx = new Error(`moveSkillDir: failed to write sidecar for ${skillFile}: ${e.message}`);
+        ctx.code = e.code;
+        ctx.cause = writeErr;
+        throw ctx;
+    }
     // Record adapter history (rewrites SKILL.md as-is + sidecar).
     try {
         const adapter = await getAdapter();
@@ -70,9 +90,16 @@ export async function moveSkillDir(skill, newStatus) {
         });
     }
     catch (err) {
-        // Adapter mismatch (Scenario C) must surface; other errors do not break the move.
-        if (err?.code === "E_ADAPTER_MISMATCH")
-            throw err;
+        // E_ADAPTER_MISMATCH is a known, recoverable mismatch — swallow it.
+        // All other adapter errors are unexpected and must surface with context.
+        const code = err?.code;
+        if (code !== "E_ADAPTER_MISMATCH") {
+            const msg = err.message ?? String(err);
+            const ctx = new Error(`moveSkillDir: adapter error (${code ?? "unknown"}): ${msg}`);
+            ctx.code = code;
+            ctx.cause = err;
+            throw ctx;
+        }
     }
     return destDir;
 }

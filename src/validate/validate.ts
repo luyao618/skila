@@ -53,6 +53,7 @@ export function validateSkilaMetadata(meta: unknown): SkilaMetadata {
   const m = meta as Record<string, unknown>;
   if (!isValidStatus(m.status)) errors.push(`invalid status: ${String(m.status)}`);
   if (typeof m.version !== "string") errors.push("skila.version must be a string");
+  else if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(m.version)) errors.push(`invalid version format: ${m.version}`);
   if (!Array.isArray(m.changelog)) errors.push("skila.changelog must be an array");
   if (errors.length > 0) throw new SkilaValidationError(errors);
   return meta as SkilaMetadata;

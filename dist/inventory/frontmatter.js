@@ -59,7 +59,27 @@ function parseYamlSubset(yaml) {
             continue;
         const key = line.slice(0, colonIdx).trim();
         const valuePart = line.slice(colonIdx + 1).trim();
-        if (valuePart === "") {
+        if (valuePart === "|" || valuePart === ">") {
+            // block scalar: collect following indented lines
+            const blockLines = [];
+            while (i + 1 < lines.length) {
+                const nextRaw = lines[i + 1];
+                if (nextRaw.trim() === "") {
+                    i++;
+                    blockLines.push("");
+                    continue;
+                }
+                const nextIndent = nextRaw.match(/^ */)[0].length;
+                if (nextIndent <= indent)
+                    break;
+                i++;
+                blockLines.push(nextRaw.slice(indent + 2));
+            }
+            const blockValue = blockLines.join("\n").trimEnd() + "\n";
+            top.container[key] = blockValue;
+            top.lastKey = key;
+        }
+        else if (valuePart === "") {
             // nested object/array follows
             const obj = {};
             top.container[key] = obj;
@@ -68,13 +88,15 @@ function parseYamlSubset(yaml) {
             top.lastKey = key;
         }
         else {
-            top.container[key] = parseInline(valuePart);
+            // force 'version' key to always be a string
+            const val = key === "version" ? parseInline(valuePart, true) : parseInline(valuePart);
+            top.container[key] = val;
             top.lastKey = key;
         }
     }
     return root;
 }
-function parseInline(s) {
+function parseInline(s, forceString = false) {
     s = s.trim();
     if (s === "null" || s === "~")
         return null;
@@ -82,10 +104,17 @@ function parseInline(s) {
         return true;
     if (s === "false")
         return false;
-    if (/^-?\d+$/.test(s))
+    if (!forceString && /^-?\d+$/.test(s))
         return parseInt(s, 10);
-    if (/^-?\d+\.\d+$/.test(s))
+    if (!forceString && /^-?\d+\.\d+$/.test(s))
         return parseFloat(s);
+    // inline sequence [a, b, c]
+    if (s.startsWith("[") && s.endsWith("]")) {
+        const inner = s.slice(1, -1).trim();
+        if (inner === "")
+            return [];
+        return inner.split(",").map((item) => parseInline(item.trim()));
+    }
     // inline object {a: b, c: d}
     if (s.startsWith("{") && s.endsWith("}")) {
         const inner = s.slice(1, -1).trim();
@@ -158,7 +187,8 @@ function formatScalar(v) {
     if (typeof v === "number")
         return String(v);
     const s = String(v);
-    if (/[:\n#]/.test(s) || s === "" || /^\s/.test(s)) {
+    // Quote if contains special YAML characters that could confuse parsers
+    if (/[:\n#\[\]{},&*!|>%@`'"]/.test(s) || s === "" || /^\s/.test(s) || /\s$/.test(s)) {
         return JSON.stringify(s);
     }
     return s;

@@ -11,6 +11,22 @@ import { getAdapter } from "../../storage/index.js";
 import { incrementUsage } from "../../feedback/store.js";
 import { sendJson } from "../middleware/token.js";
 import { bumpAndAppend, writeSidecar } from "../../inventory/sidecar.js";
+import { MAX_BODY_BYTES } from "../server.js";
+/**
+ * FIX-H13: bounded body reader. Throws SkilaBodyTooLarge if request exceeds
+ * MAX_BODY_BYTES. Caller MUST handle and return 413.
+ */
+async function readBoundedBody(req) {
+    let body = "";
+    let received = 0;
+    for await (const chunk of req) {
+        received += chunk.length;
+        if (received > MAX_BODY_BYTES)
+            return { tooLarge: true, limit: MAX_BODY_BYTES };
+        body += chunk;
+    }
+    return body;
+}
 function skillSummary(s) {
     const skila = s.skila;
     return {
@@ -66,9 +82,12 @@ export async function handleGetSkill(req, res, name) {
     });
 }
 export async function handlePutSkill(req, res, name) {
-    let body = "";
-    for await (const chunk of req)
-        body += chunk;
+    const bodyOrLimit = await readBoundedBody(req);
+    if (typeof bodyOrLimit !== "string") {
+        sendJson(res, 413, { error: `request body exceeds ${bodyOrLimit.limit} byte limit` });
+        return;
+    }
+    const body = bodyOrLimit;
     let payload;
     try {
         payload = JSON.parse(body);
@@ -82,6 +101,11 @@ export async function handlePutSkill(req, res, name) {
         sendJson(res, 400, { error: "body.content must be a string" });
         return;
     }
+    // FIX-H16: mtime is required for optimistic concurrency
+    if (!payload.mtime) {
+        sendJson(res, 400, { error: "mtime required" });
+        return;
+    }
     // Validate just the SKILL.md (name + description + dir match).
     try {
         validateSkillContent(content, { expectedDirName: name });
@@ -90,18 +114,16 @@ export async function handlePutSkill(req, res, name) {
         sendJson(res, 422, { error: "validation failed", errors: e.errors ?? [e.message] });
         return;
     }
-    // mtime check (optimistic concurrency)
+    // mtime check (optimistic concurrency) — mtime is required (FIX-H16)
     const skill = findSkill(name);
     if (!skill) {
         sendJson(res, 404, { error: `skill not found: ${name}` });
         return;
     }
-    if (payload.mtime) {
-        const diskMtime = statSync(skill.path).mtime.toISOString();
-        if (diskMtime !== payload.mtime) {
-            sendJson(res, 409, { error: "conflict: skill was modified since last read", diskMtime });
-            return;
-        }
+    const diskMtime = statSync(skill.path).mtime.toISOString();
+    if (diskMtime !== payload.mtime) {
+        sendJson(res, 409, { error: "conflict: skill was modified since last read", diskMtime });
+        return;
     }
     // Bump sidecar and record a changelog entry. Disk SKILL.md = user bytes.
     const nextSidecar = bumpAndAppend(skill.skila, `web edit (was v${skill.skila.version || "0.0.0"})`, "user-edit-via-web");
@@ -126,9 +148,12 @@ export async function handlePutSkill(req, res, name) {
     });
 }
 export async function handlePostFeedback(req, res, name) {
-    let rawBody = "";
-    for await (const chunk of req)
-        rawBody += chunk;
+    const bodyOrLimit = await readBoundedBody(req);
+    if (typeof bodyOrLimit !== "string") {
+        sendJson(res, 413, { error: `request body exceeds ${bodyOrLimit.limit} byte limit` });
+        return;
+    }
+    const rawBody = bodyOrLimit;
     let payload = {};
     try {
         if (rawBody)

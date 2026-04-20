@@ -1,11 +1,17 @@
 // Inventory scanner: walks 5 status dirs and parses SKILL.md files.
-import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync, lstatSync, realpathSync, existsSync } from "node:fs";
+import { join, sep } from "node:path";
 import { parseSkillFile } from "./frontmatter.js";
 import { readSidecarIfExists, defaultSkila } from "./sidecar.js";
 import { skillsRoot, statusDir } from "../config/config.js";
+// Module-level warnings accumulated during scan (cleared on each scanInventory call).
+let _lastWarnings = [];
+export function getLastScanWarnings() {
+    return _lastWarnings;
+}
 const ALL_STATUSES = ["draft", "staging", "published", "archived", "disabled"];
 export function scanInventory() {
+    _lastWarnings = [];
     const out = [];
     for (const status of ALL_STATUSES) {
         out.push(...scanStatus(status));
@@ -16,6 +22,7 @@ export function scanStatus(status) {
     const root = statusDir(status);
     if (!existsSync(root))
         return [];
+    const resolvedRoot = realpathSync(root);
     const out = [];
     let entries;
     try {
@@ -33,13 +40,30 @@ export function scanStatus(status) {
         const dir = join(root, entry);
         let st;
         try {
-            st = statSync(dir);
+            st = lstatSync(dir);
         }
         catch {
             continue;
         }
+        // Reject symlinks — use lstat to detect before following
+        if (st.isSymbolicLink()) {
+            _lastWarnings.push({ type: "symlink", path: dir });
+            continue;
+        }
         if (!st.isDirectory())
             continue;
+        // Reject out-of-root paths after realpath resolution
+        let resolvedDir;
+        try {
+            resolvedDir = realpathSync(dir);
+        }
+        catch {
+            continue;
+        }
+        if (resolvedDir !== resolvedRoot && !resolvedDir.startsWith(resolvedRoot + sep)) {
+            _lastWarnings.push({ type: "out-of-root", path: dir });
+            continue;
+        }
         const file = join(dir, "SKILL.md");
         if (!existsSync(file))
             continue;

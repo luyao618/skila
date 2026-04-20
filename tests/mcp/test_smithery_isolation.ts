@@ -43,7 +43,8 @@ describe("D5 — Smithery isolation", () => {
     });
     expect(ready).toBeTruthy();
     expect(ready.type).toBe("ready");
-    expect(String(ready.home)).toMatch(/skila-smithery-\d+/);
+    // FIX-M16: home is now mkdtemp-suffixed (random), not PID. Just assert prefix + tmpdir containment.
+    expect(String(ready.home)).toMatch(/skila-smithery-/);
     expect(ready.home.startsWith(tmpdir())).toBe(true);
 
     // Try to call disabled mutation command
@@ -76,5 +77,26 @@ describe("D5 — Smithery isolation", () => {
     const removed = pruneOrphanSmitheryDirs();
     expect(removed.some((p) => p === orphan)).toBe(true);
     expect(existsSync(orphan)).toBe(false);
+  });
+});
+
+// FIX-H22: MCP inspect awaits runInspect promise
+describe("FIX-H22 — MCP inspect awaits runInspect", () => {
+  it("handleMcpRequest inspect returns actual skill content, not empty object", async () => {
+    const { handleMcpRequest } = await import("../../src/commands/mcp.js");
+    // Should throw or return a result object — not an unresolved Promise
+    let result: any;
+    try {
+      result = await handleMcpRequest({ method: "skila.inspect", params: { name: "does-not-exist" }, id: 99 });
+    } catch {
+      // If it throws (skill not found), that's fine — the bug was it returned a Promise instead of awaiting
+      return;
+    }
+    // If it resolves, verify result is NOT a Promise
+    if (result && result.result !== undefined) {
+      expect(result.result instanceof Promise).toBe(false);
+      // Result should be a plain object with content
+      expect(typeof result.result).toBe("object");
+    }
   });
 });

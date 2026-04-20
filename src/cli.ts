@@ -2,6 +2,20 @@
 // skila CLI dispatcher (Phase 2 — real implementations).
 
 import { parseArgs } from "node:util";
+import { pathToFileURL } from "node:url";
+
+// Custom error class for user-facing errors (FIX-H20)
+export class SkilaError extends Error {
+  hint?: string;
+  constructor(message: string, hint?: string) {
+    super(message);
+    this.name = "SkilaError";
+    this.hint = hint;
+  }
+}
+
+const VALID_OUTCOMES = new Set(["success", "failure", "unknown"]);
+const VALID_STATUSES = new Set(["draft", "staging", "published", "archived", "disabled"]);
 
 async function dispatch(argv: string[]): Promise<number> {
   if (argv.length === 0 || argv[0] === "-h" || argv[0] === "--help" || argv[0] === "help") {
@@ -28,7 +42,8 @@ async function dispatch(argv: string[]): Promise<number> {
         "version": { type: "string" },
         "status": { type: "string" },
         "fix-storage": { type: "boolean" },
-        "yes": { type: "boolean" }
+        "yes": { type: "boolean" },
+        "port": { type: "string" }
       }
     });
   } catch (err) {
@@ -37,6 +52,16 @@ async function dispatch(argv: string[]): Promise<number> {
   }
   const positionals = parsed.positionals;
   const values = parsed.values as Record<string, string | boolean | undefined>;
+
+  // FIX-H21: enum validation
+  if (values["outcome"] !== undefined && !VALID_OUTCOMES.has(values["outcome"] as string)) {
+    process.stderr.write(`skila: invalid --outcome '${values["outcome"]}' (must be one of: success, failure, unknown)\n`);
+    return 64;
+  }
+  if (values["status"] !== undefined && !VALID_STATUSES.has(values["status"] as string)) {
+    process.stderr.write(`skila: invalid --status '${values["status"]}' (must be one of: draft, staging, published, archived, disabled)\n`);
+    return 64;
+  }
 
   switch (cmd) {
     case "distill": {
@@ -119,6 +144,11 @@ async function dispatch(argv: string[]): Promise<number> {
       process.stdout.write(JSON.stringify(r, null, 2) + "\n");
       return r.errors.length > 0 ? 1 : 0;
     }
+    case "install-hooks": {
+      const { runInstallHooks } = await import("./commands/install-hooks.js");
+      runInstallHooks();
+      return 0;
+    }
     case "stats":
       process.stdout.write(`skila stats: not yet implemented (Phase 3+)\n`);
       return 0;
@@ -154,19 +184,37 @@ async function dispatch(argv: string[]): Promise<number> {
 export { collectFeedback } from "./feedback/collector.js";
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
-  return dispatch(argv);
+  try {
+    return await dispatch(argv);
+  } catch (err) {
+    if (err instanceof SkilaError) {
+      process.stderr.write(`skila: ${err.message}\n`);
+      if (err.hint) process.stderr.write(`hint: ${err.hint}\n`);
+      if (process.env.SKILA_DEBUG === "1") process.stderr.write((err.stack ?? "") + "\n");
+      return 1;
+    }
+    throw err;
+  }
 }
 
+// FIX-H19: Detect direct invocation via import.meta.url
 const invokedDirectly = (() => {
   try {
     const argv1 = process.argv[1] ?? "";
-    return argv1.endsWith("cli.js") || argv1.endsWith("cli.ts");
+    const fileUrl = pathToFileURL(argv1).href;
+    return import.meta.url === fileUrl;
   } catch { return false; }
 })();
 
 if (invokedDirectly) {
   main().then((code) => process.exit(code)).catch((err) => {
-    process.stderr.write(`skila: fatal: ${(err as Error).stack ?? err}\n`);
+    if (err instanceof SkilaError) {
+      process.stderr.write(`skila: ${err.message}\n`);
+      if (err.hint) process.stderr.write(`hint: ${err.hint}\n`);
+      if (process.env.SKILA_DEBUG === "1") process.stderr.write(err.stack + "\n");
+    } else {
+      process.stderr.write(`skila: fatal: ${(err as Error).stack ?? err}\n`);
+    }
     process.exit(1);
   });
 }

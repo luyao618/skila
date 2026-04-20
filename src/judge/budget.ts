@@ -4,9 +4,10 @@
 // - degraded path: name-only inventory when full prompt > budget
 
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync, existsSync, statSync, readdirSync, unlinkSync } from "node:fs";
+import { readFileSync, existsSync, statSync, readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { ensureSkilaHome, loadConfig } from "../config/config.js";
+import { atomicWriteFileSync } from "../storage/atomic.js";
 import type { Skill } from "../types.js";
 
 export type PromptMode = "full" | "degraded" | "cached";
@@ -53,7 +54,7 @@ export function readInventoryCache(hash: string): string | null {
 
 export function writeInventoryCache(hash: string, summary: string): void {
   const f = join(cacheDir(), `inventory-${hash}.json`);
-  writeFileSync(f, JSON.stringify({ ts: Date.now(), summary }));
+  atomicWriteFileSync(f, JSON.stringify({ ts: Date.now(), summary }));
 }
 
 export function pruneStaleCache(): number {
@@ -92,6 +93,13 @@ export interface BuiltPrompt {
 export function buildBudgetedPrompt(inputs: BudgetInputs): BuiltPrompt {
   const cfg = loadConfig();
   const budget = cfg.judgeTokenBudget;
+
+  // Pre-check: instructions alone must fit in budget
+  if (estimateTokens(inputs.instructions) > budget) {
+    const err = Object.assign(new Error("E_BUDGET_TOO_SMALL: instructions alone exceed token budget"), { code: "E_BUDGET_TOO_SMALL" });
+    throw err;
+  }
+
   const hash = inventoryHash(inputs.inventory);
 
   // Try full mode
@@ -99,9 +107,9 @@ export function buildBudgetedPrompt(inputs: BudgetInputs): BuiltPrompt {
   let prompt = `${inputs.instructions}\n\n## Inventory\n${fullInv}\n\n## Candidate\n${inputs.candidateBody}\n\n## Tool sequence (last 30)\n${inputs.toolTraceText}\n`;
   let tokens = estimateTokens(prompt);
   if (tokens <= budget) {
+    const alreadyCached = readInventoryCache(hash);
     writeInventoryCache(hash, fullInv);
-    const cached = readInventoryCache(hash);
-    return { prompt, mode: cached ? "cached" : "full", tokens };
+    return { prompt, mode: alreadyCached ? "cached" : "full", tokens };
   }
 
   // Truncate inventory first (drop oldest-touched)
@@ -117,7 +125,7 @@ export function buildBudgetedPrompt(inputs: BudgetInputs): BuiltPrompt {
     prompt = `${inputs.instructions}\n\n## Inventory\n${inv}\n\n## Candidate\n${inputs.candidateBody}\n\n## Tool sequence (last 30)\n${inputs.toolTraceText}\n`;
     tokens = estimateTokens(prompt);
   }
-  if (tokens <= budget) return { prompt, mode: "full", tokens };
+  if (tokens <= budget) return { prompt, mode: kept.length === 0 ? "degraded" : "full", tokens };
 
   // Degrade to name-only
   let degradedKept = inputs.inventory;

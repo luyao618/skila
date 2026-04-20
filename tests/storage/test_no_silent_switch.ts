@@ -1,4 +1,5 @@
 // Scenario C — refuse silent switch when sentinel ↔ on-disk reality disagree.
+// FIX-C6 — also refuse first-run probe when home looks initialized (.git/ or versions/ present).
 import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { writeFileSync, mkdirSync, rmSync, mkdtempSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -45,6 +46,32 @@ describe("Scenario C — no silent adapter switch", () => {
     catch (err) { captured = err; }
     expect(captured).not.toBeNull();
     expect(String(captured?.code)).toBe("E_ADAPTER_MISMATCH");
+    expect(String(captured?.hint || "")).toMatch(/skila doctor --fix-storage/);
+  });
+
+  it("FIX-C6: sentinel deleted, .git/ present → throws E_ADAPTER_MISSING_SENTINEL", async () => {
+    // No sentinel, but .git/ exists — home is initialized, not a first run
+    mkdirSync(join(home, ".git"), { recursive: true });
+    expect(existsSync(sentinelPath(home))).toBe(false);
+
+    let captured: any = null;
+    try { await getAdapter(); }
+    catch (err) { captured = err; }
+    expect(captured).not.toBeNull();
+    expect(String(captured?.code)).toBe("E_ADAPTER_MISSING_SENTINEL");
+    expect(String(captured?.hint || "")).toMatch(/skila doctor --fix-storage/);
+  });
+
+  it("FIX-C6: sentinel deleted, versions/ present → throws E_ADAPTER_MISSING_SENTINEL", async () => {
+    // No sentinel, but versions/ directory exists — home is initialized, not a first run
+    mkdirSync(join(home, "versions"), { recursive: true });
+    expect(existsSync(sentinelPath(home))).toBe(false);
+
+    let captured: any = null;
+    try { await getAdapter(); }
+    catch (err) { captured = err; }
+    expect(captured).not.toBeNull();
+    expect(String(captured?.code)).toBe("E_ADAPTER_MISSING_SENTINEL");
     expect(String(captured?.hint || "")).toMatch(/skila doctor --fix-storage/);
   });
 });

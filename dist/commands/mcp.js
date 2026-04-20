@@ -1,14 +1,37 @@
 // Smithery stdio MCP server — D5 isolation.
-// - SKILA_HOME = /tmp/skila-smithery-<pid>/
+// - SKILA_HOME = an UNPREDICTABLE mkdtemp dir under tmpdir() (FIX-M16)
 // - Flat-only adapter forced
 // - Mutation commands disabled (only inspect/list/lint exposed)
-// - Boot scans /tmp/skila-smithery-* and removes orphans (mtime > 1h).
-import { mkdirSync, readdirSync, statSync, rmSync, existsSync } from "node:fs";
+// - Boot scans /tmp/skila-smithery-* and removes orphans (mtime > 1h),
+//   refusing to follow symlinks (FIX-M16).
+import { mkdtempSync, mkdirSync, readdirSync, statSync, lstatSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 const ORPHAN_AGE_MS = 60 * 60 * 1000;
+const SMITHERY_PREFIX = "skila-smithery-";
+let _activeHome = null;
+/**
+ * FIX-M16: Returns a freshly-minted, OS-randomised directory under tmpdir().
+ * Caller must remember the returned path; PID-based prediction is no longer
+ * possible. We keep the legacy "skila-smithery-" prefix so pruneOrphan…
+ * still recognises old-format leftovers.
+ */
+export function createSmitheryHome() {
+    if (_activeHome)
+        return _activeHome;
+    const dir = mkdtempSync(join(tmpdir(), SMITHERY_PREFIX));
+    _activeHome = dir;
+    return dir;
+}
+/**
+ * Legacy alias kept for tests; returns the active mkdtemp dir if booted, else
+ * a deterministic-but-still-prefixed fallback (used only by tests that pre-date
+ * FIX-M16 — still under tmpdir, still prefixed, but no symlink-follow risk).
+ */
 export function smitheryHomeForPid(pid = process.pid) {
-    return join(tmpdir(), `skila-smithery-${pid}`);
+    if (_activeHome)
+        return _activeHome;
+    return join(tmpdir(), `${SMITHERY_PREFIX}${pid}`);
 }
 export function pruneOrphanSmitheryDirs() {
     const t = tmpdir();
@@ -21,10 +44,18 @@ export function pruneOrphanSmitheryDirs() {
         return removed;
     }
     for (const e of entries) {
-        if (!e.startsWith("skila-smithery-"))
+        if (!e.startsWith(SMITHERY_PREFIX))
             continue;
         const full = join(t, e);
         try {
+            // FIX-M16: lstat (no symlink follow). If somebody pre-planted a symlink
+            // /tmp/skila-smithery-foo -> /etc, we MUST NOT delete /etc. We delete only
+            // when the entry is a real directory.
+            const lst = lstatSync(full);
+            if (lst.isSymbolicLink())
+                continue;
+            if (!lst.isDirectory())
+                continue;
             const st = statSync(full);
             if (Date.now() - st.mtimeMs > ORPHAN_AGE_MS) {
                 rmSync(full, { recursive: true, force: true });
@@ -54,7 +85,7 @@ export async function handleMcpRequest(req) {
     }
     if (cmd === "inspect") {
         const { runInspect } = await import("../commands/inspect.js");
-        return { result: runInspect(req.params?.name, req.params?.version) };
+        return { result: await runInspect(req.params?.name, req.params?.version) };
     }
     if (cmd === "lint") {
         const { runLint } = await import("../commands/lint.js");
@@ -63,7 +94,7 @@ export async function handleMcpRequest(req) {
     return { error: "unreachable" };
 }
 export function bootMcp() {
-    const home = smitheryHomeForPid();
+    const home = createSmitheryHome();
     mkdirSync(home, { recursive: true });
     process.env.SKILA_HOME = home;
     process.env.SKILA_SMITHERY = "1";

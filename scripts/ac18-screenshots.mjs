@@ -1,14 +1,40 @@
 /**
  * AC18 Visual Gate Screenshot Script
  * Captures 4 views of the skila web control panel for visual scoring.
+ *
+ * Token resolution order:
+ *   1. SKILA_TOKEN environment variable
+ *   2. GET http://127.0.0.1:7777/api/token  (only served on Unix socket / stdin pipe)
  */
 import { chromium } from "playwright";
 import { mkdirSync } from "fs";
 import { join } from "path";
 
 const BASE = "http://127.0.0.1:7777";
-const TOKEN = "53181c9fbe6c4210759a200a08b130a033d84907bea094bd";
 const OUT = "/Users/yao/work/code/personal/skila/.omc/screenshots/phase-3";
+
+async function resolveToken() {
+  if (process.env.SKILA_TOKEN) {
+    return process.env.SKILA_TOKEN;
+  }
+  // Attempt to fetch from /api/token (only available when stdin is a pipe/socket)
+  if (!process.stdin.isTTY) {
+    try {
+      const res = await fetch(`${BASE}/api/token`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.token) return data.token;
+      }
+    } catch {
+      // fall through
+    }
+  }
+  throw new Error(
+    "No token available. Set SKILA_TOKEN env var or run via Unix socket pipe."
+  );
+}
+
+const TOKEN = await resolveToken();
 
 mkdirSync(OUT, { recursive: true });
 

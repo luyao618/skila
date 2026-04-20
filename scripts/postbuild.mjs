@@ -26,17 +26,20 @@ mkdirSync(join(DIST, "web"), { recursive: true });
 console.log("[postbuild] esbuild: bundling CodeMirror + marked → dist/web/vendor/cm.js");
 const entryShim = join(SRC, "web", "vendor-entry.mjs");
 mkdirSync(dirname(entryShim), { recursive: true });
-writeFileSync(
-  entryShim,
-  [
-    "// Auto-generated vendor entry consumed only by scripts/postbuild.mjs.",
-    "export { EditorState, Compartment } from \"@codemirror/state\";",
-    "export { EditorView, keymap, lineNumbers, highlightActiveLine } from \"@codemirror/view\";",
-    "export { markdown } from \"@codemirror/lang-markdown\";",
-    "export { marked } from \"marked\";",
-    ""
-  ].join("\n")
-);
+// Idempotent: only write vendor-entry.mjs if it doesn't already exist
+if (!existsSync(entryShim)) {
+  writeFileSync(
+    entryShim,
+    [
+      "// Auto-generated vendor entry consumed only by scripts/postbuild.mjs.",
+      "export { EditorState, Compartment } from \"@codemirror/state\";",
+      "export { EditorView, keymap, lineNumbers, highlightActiveLine } from \"@codemirror/view\";",
+      "export { markdown } from \"@codemirror/lang-markdown\";",
+      "export { marked } from \"marked\";",
+      ""
+    ].join("\n")
+  );
+}
 
 await build({
   entryPoints: [entryShim],
@@ -103,6 +106,22 @@ for (const f of readdirSync(join(SRC, "web"))) {
 console.log("[postbuild] copying src/hooks/feedback.cjs → dist/hooks/feedback.cjs");
 copyFileSync(join(SRC, "hooks", "feedback.cjs"), join(HOOKS_OUT, "feedback.cjs"));
 
+// FIX-H23: esbuild: bundle src/feedback/collector.ts → dist/hooks/feedback-entry.cjs
+// CommonJS output, tree-shaken, target Node 20+.
+console.log("[postbuild] esbuild: bundling src/feedback/collector.ts → dist/hooks/feedback-entry.cjs");
+await build({
+  entryPoints: [join(SRC, "feedback", "collector.ts")],
+  bundle: true,
+  format: "cjs",
+  platform: "node",
+  target: "node20",
+  minify: true,
+  treeShaking: true,
+  legalComments: "none",
+  outfile: join(HOOKS_OUT, "feedback-entry.cjs"),
+  logLevel: "info",
+});
+
 // 5. Ensure dist/cli.js has shebang + is executable
 const cliPath = join(DIST, "cli.js");
 if (existsSync(cliPath)) {
@@ -115,6 +134,20 @@ if (existsSync(cliPath)) {
   console.log("[postbuild] dist/cli.js: shebang + chmod +x");
 } else {
   console.warn("[postbuild] WARNING: dist/cli.js not found — did tsc run?");
+}
+
+// FIX-M12: AC16 CDN check — dist/web/index.html must not contain any https:// URLs
+const indexHtmlPath = join(DIST, "web", "index.html");
+if (existsSync(indexHtmlPath)) {
+  const indexContent = readFileSync(indexHtmlPath, "utf8");
+  const cdnMatches = indexContent.match(/https:\/\//g);
+  if (cdnMatches && cdnMatches.length > 0) {
+    console.error(`[postbuild] AC16 violation: dist/web/index.html contains ${cdnMatches.length} https:// reference(s). Remove all CDN links.`);
+    process.exit(1);
+  }
+  console.log("[postbuild] AC16 CDN check passed: no https:// in dist/web/index.html");
+} else {
+  console.warn("[postbuild] WARNING: dist/web/index.html not found — skipping AC16 CDN check");
 }
 
 console.log("[postbuild] done.");

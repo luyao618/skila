@@ -1,15 +1,28 @@
 // Inventory scanner: walks 5 status dirs and parses SKILL.md files.
 
-import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync, lstatSync, realpathSync, existsSync } from "node:fs";
+import { join, sep } from "node:path";
 import type { Skill, SkillStatus } from "../types.js";
 import { parseSkillFile } from "./frontmatter.js";
 import { readSidecarIfExists, defaultSkila } from "./sidecar.js";
 import { skillsRoot, statusDir } from "../config/config.js";
 
+export interface ScanWarning {
+  type: "symlink" | "out-of-root";
+  path: string;
+}
+
+// Module-level warnings accumulated during scan (cleared on each scanInventory call).
+let _lastWarnings: ScanWarning[] = [];
+
+export function getLastScanWarnings(): ScanWarning[] {
+  return _lastWarnings;
+}
+
 const ALL_STATUSES: SkillStatus[] = ["draft", "staging", "published", "archived", "disabled"];
 
 export function scanInventory(): Skill[] {
+  _lastWarnings = [];
   const out: Skill[] = [];
   for (const status of ALL_STATUSES) {
     out.push(...scanStatus(status));
@@ -20,6 +33,7 @@ export function scanInventory(): Skill[] {
 export function scanStatus(status: SkillStatus): Skill[] {
   const root = statusDir(status);
   if (!existsSync(root)) return [];
+  const resolvedRoot = realpathSync(root);
   const out: Skill[] = [];
   let entries: string[];
   try {
@@ -35,11 +49,27 @@ export function scanStatus(status: SkillStatus): Skill[] {
     const dir = join(root, entry);
     let st;
     try {
-      st = statSync(dir);
+      st = lstatSync(dir);
     } catch {
       continue;
     }
+    // Reject symlinks — use lstat to detect before following
+    if (st.isSymbolicLink()) {
+      _lastWarnings.push({ type: "symlink", path: dir });
+      continue;
+    }
     if (!st.isDirectory()) continue;
+    // Reject out-of-root paths after realpath resolution
+    let resolvedDir: string;
+    try {
+      resolvedDir = realpathSync(dir);
+    } catch {
+      continue;
+    }
+    if (resolvedDir !== resolvedRoot && !resolvedDir.startsWith(resolvedRoot + sep)) {
+      _lastWarnings.push({ type: "out-of-root", path: dir });
+      continue;
+    }
     const file = join(dir, "SKILL.md");
     if (!existsSync(file)) continue;
     try {

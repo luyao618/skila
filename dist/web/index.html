@@ -277,7 +277,10 @@
       let originalDoc = "";
       let dirty = false;
       let currentMtime = null;
-      let serverToken = getCookie("skila_token") ?? "";
+      // FIX-C8: token is HttpOnly — JS cannot read it. Browser auto-rides the
+      // skila_token cookie on every same-origin request, so we never need to
+      // attach an explicit header. The previous getCookie() / X-Skila-Token
+      // path was dead code (HttpOnly cookie returns undefined to JS).
       let activeTab = "skills";
       let activeEditorTab = "skill";
       let activeView = "raw";          // "raw" | "preview"
@@ -307,13 +310,23 @@
       }
 
       // ── Helpers ───────────────────────────────────────────────────────────
-      function getCookie(name) {
-        return document.cookie.split(";").map(c => c.trim()).find(c => c.startsWith(name + "="))?.split("=")[1];
+      // FIX-M14: HTML-escape helper to prevent XSS via innerHTML
+      function esc(str) {
+        return String(str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
       }
 
+      // FIX-C8: cookie is HttpOnly so document.cookie cannot read it.
+      // The browser sends it automatically with credentials:'same-origin'
+      // (the default for fetch on same-origin URLs).
+
       function api(path, opts = {}) {
-        const headers = { "Content-Type": "application/json", "x-skila-token": serverToken, ...(opts.headers ?? {}) };
-        return fetch(path, { ...opts, headers });
+        const headers = { "Content-Type": "application/json", ...(opts.headers ?? {}) };
+        return fetch(path, { credentials: "same-origin", ...opts, headers });
       }
 
       function statusBadge(status) {
@@ -323,7 +336,7 @@
                       archived:  { cls: "text-[#8b949e] bg-[#161b22]", label: "arc" },
                       disabled:  { cls: "text-[#484f58] bg-[#161b22]", label: "dis" } };
         const { cls, label } = map[status] ?? { cls: "text-[#8b949e]", label: status };
-        return `<span class="inline-block px-1 py-0.5 rounded text-[9px] font-mono font-medium ${cls}">${label}</span>`;
+        return `<span class="inline-block px-1 py-0.5 rounded text-[9px] font-mono font-medium ${cls}">${esc(label)}</span>`;
       }
 
       function relativeTime(iso) {
@@ -433,10 +446,12 @@
         } else {
           ul.innerHTML = files.map(f => {
             const editable = isTextFile(f);
+            const safeF = esc(f);
+            const safeEnc = esc(encodeURIComponent(f));
             if (editable) {
-              return `<li><button class="text-[#58a6ff] hover:underline text-left" data-fpath="${encodeURIComponent(f)}">${f}</button></li>`;
+              return `<li><button class="text-[#58a6ff] hover:underline text-left" data-fpath="${safeEnc}">${safeF}</button></li>`;
             }
-            return `<li><span class="text-[#484f58] cursor-not-allowed" title="binary file (open externally)">${f}</span></li>`;
+            return `<li><span class="text-[#484f58] cursor-not-allowed" title="binary file (open externally)">${safeF}</span></li>`;
           }).join("");
           ul.querySelectorAll("button[data-fpath]").forEach(btn => {
             btn.addEventListener("click", () => loadFile(btn.dataset.fpath));
@@ -563,10 +578,10 @@
           for (const s of grouped[st]) {
             const isSel = s.name === selectedName;
             const stagingRing = s.status === "staging" ? " ring-1 ring-[#f0b429]" : "";
-            html += `<li role="option" aria-selected="${isSel}" data-name="${s.name}"
+            html += `<li role="option" aria-selected="${isSel}" data-name="${esc(s.name)}"
               class="flex items-center justify-between px-2 py-1.5 rounded cursor-pointer text-xs gap-1
               ${isSel ? "bg-[#21262d] text-[#e6edf3]" : "text-[#8b949e] hover:bg-[#1c2128] hover:text-[#e6edf3]"}${stagingRing}">
-              <span class="truncate flex-1" title="${s.name}">${s.name}</span>
+              <span class="truncate flex-1" title="${esc(s.name)}">${esc(s.name)}</span>
               ${statusBadge(s.status)}
             </li>`;
           }
@@ -826,14 +841,14 @@
         if (d.stagingBacklog?.length > 0) {
           stagingBacklog.classList.remove("hidden");
           document.getElementById("staging-backlog-list").innerHTML = d.stagingBacklog.map(n =>
-            `<li><button class="text-[#f0b429] hover:underline text-xs" onclick="switchToSkill('${n}')">${n}</button></li>`
+            `<li><button class="text-[#f0b429] hover:underline text-xs" onclick="switchToSkill('${esc(n)}')">${esc(n)}</button></li>`
           ).join("");
         }
         const lowSuccess = document.getElementById("low-success");
         if (d.lowSuccess?.length > 0) {
           lowSuccess.classList.remove("hidden");
           document.getElementById("low-success-list").innerHTML = d.lowSuccess.map(n =>
-            `<li class="text-xs">${n}</li>`).join("");
+            `<li class="text-xs">${esc(n)}</li>`).join("");
         }
       }
 

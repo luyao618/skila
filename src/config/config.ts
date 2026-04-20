@@ -20,7 +20,7 @@ export const DEFAULT_CONFIG: SkilaConfig = {
   promotionFloorInvocations: 10,
   promotionFloorFailures: 1,
   judgeTokenBudget: 4000,
-  lockTimeoutMs: 100,
+  lockTimeoutMs: 500,
   lockStaleMs: 5000,
   disabledHooks: []
 };
