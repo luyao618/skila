@@ -23,7 +23,11 @@
       .cm-editor .cm-gutters { background: var(--cm-gutter); border-right: 1px solid var(--cm-border); color: #484f58; }
       .cm-editor .cm-activeLineGutter { background: var(--cm-line-active); }
       .cm-editor .cm-activeLine { background: var(--cm-line-active); }
-      .cm-editor .cm-cursor { border-left-color: var(--cm-cursor); }
+      .cm-editor .cm-cursor, .cm-editor .cm-dropCursor { border-left: 2px solid var(--cm-cursor); }
+      .cm-editor.cm-focused .cm-cursor { border-left-color: var(--cm-cursor) !important; display: block !important; }
+      .cm-editor .cm-cursorLayer { animation: cm-blink 1s steps(2) infinite; }
+      .cm-editor .cm-content { caret-color: #58a6ff; }
+      @keyframes cm-blink { 50% { opacity: 0; } }
       .cm-editor .cm-selectionBackground { background: var(--cm-selection) !important; }
       /* Scrollbar */
       ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -35,6 +39,30 @@
       .staging-ring { box-shadow: 0 0 0 2px #f0b429; }
       /* Sparkline */
       .sparkline { display: inline-block; vertical-align: middle; }
+      /* Markdown preview pane */
+      #preview { color: #e6edf3; line-height: 1.65; font-size: 14px; }
+      #preview h1 { font-size: 1.7em; font-weight: 600; margin: 0.6em 0 0.4em; padding-bottom: 0.3em; border-bottom: 1px solid #30363d; }
+      #preview h2 { font-size: 1.4em; font-weight: 600; margin: 1em 0 0.4em; padding-bottom: 0.25em; border-bottom: 1px solid #30363d; }
+      #preview h3 { font-size: 1.2em; font-weight: 600; margin: 0.9em 0 0.35em; }
+      #preview h4, #preview h5, #preview h6 { font-weight: 600; margin: 0.8em 0 0.3em; }
+      #preview p { margin: 0.6em 0; }
+      #preview a { color: #58a6ff; text-decoration: none; }
+      #preview a:hover { text-decoration: underline; }
+      #preview ul, #preview ol { padding-left: 1.6em; margin: 0.5em 0; }
+      #preview li { margin: 0.2em 0; }
+      #preview code { font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace; font-size: 0.88em; background: #161b22; padding: 0.15em 0.4em; border-radius: 4px; border: 1px solid #30363d; }
+      #preview pre { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px 14px; overflow-x: auto; margin: 0.7em 0; }
+      #preview pre code { background: transparent; padding: 0; border: none; font-size: 0.9em; }
+      #preview blockquote { border-left: 3px solid #30363d; color: #8b949e; padding: 0.2em 1em; margin: 0.7em 0; }
+      #preview table { border-collapse: collapse; margin: 0.7em 0; }
+      #preview th, #preview td { border: 1px solid #30363d; padding: 6px 12px; }
+      #preview th { background: #161b22; font-weight: 600; }
+      #preview hr { border: none; border-top: 1px solid #30363d; margin: 1.2em 0; }
+      #preview img { max-width: 100%; }
+      /* View-mode pills */
+      .view-pill { padding: 2px 10px; font-size: 11px; border-radius: 4px; color: #8b949e; cursor: pointer; }
+      .view-pill:hover { color: #e6edf3; }
+      .view-pill.active { background: #21262d; color: #e6edf3; }
     </style>
   </head>
   <body class="bg-[#0d1117] text-[#e6edf3] font-sans h-screen overflow-hidden antialiased">
@@ -130,16 +158,26 @@
               <span id="active-skill-version" class="text-[10px] text-[#8b949e] font-mono shrink-0"></span>
             </div>
             <div class="flex gap-1">
-              <button id="editor-tab-skill" class="editor-tab px-2 py-1 text-xs rounded" data-etab="skill">Edit SKILL.md</button>
+              <button id="editor-tab-skill" class="editor-tab px-2 py-1 text-xs rounded" data-etab="skill">SKILL.md</button>
               <button id="editor-tab-scripts" class="editor-tab px-2 py-1 text-xs rounded" data-etab="scripts">Scripts</button>
               <button id="editor-tab-refs" class="editor-tab px-2 py-1 text-xs rounded" data-etab="refs">References</button>
               <button id="editor-tab-assets" class="editor-tab px-2 py-1 text-xs rounded" data-etab="assets">Assets</button>
+            </div>
+          </div>
+          <!-- Sub-toolbar: view mode + active file breadcrumb -->
+          <div id="editor-subbar" class="px-4 py-1.5 border-b border-[#30363d] flex items-center justify-between text-xs shrink-0 bg-[#0d1117]">
+            <div id="active-file-crumb" class="text-[#8b949e] font-mono truncate min-w-0 flex-1">SKILL.md</div>
+            <div id="view-mode" class="flex items-center gap-1 shrink-0 ml-3">
+              <button id="view-raw" class="view-pill active" data-view="raw">Raw</button>
+              <button id="view-preview" class="view-pill" data-view="preview">Preview</button>
             </div>
           </div>
           <!-- Description -->
           <div id="active-skill-desc" class="px-4 py-1.5 text-xs text-[#8b949e] border-b border-[#30363d] shrink-0 hidden"></div>
           <!-- Editor container -->
           <div id="editor" class="flex-1 min-h-0 overflow-hidden" aria-label="CodeMirror editor"></div>
+          <!-- Markdown preview container -->
+          <div id="preview" class="flex-1 min-h-0 overflow-y-auto px-6 py-4 hidden" aria-label="Markdown preview"></div>
           <!-- File list (for scripts/refs/assets tabs) -->
           <div id="file-list-view" class="flex-1 min-h-0 overflow-y-auto p-4 hidden">
             <ul id="file-list" class="space-y-1 text-xs font-mono"></ul>
@@ -229,7 +267,7 @@
     </div><!-- #app -->
 
     <script type="module">
-      import { EditorState, Compartment, EditorView, keymap, lineNumbers, highlightActiveLine, markdown } from "./vendor/cm.js";
+      import { EditorState, Compartment, EditorView, keymap, lineNumbers, highlightActiveLine, markdown, marked } from "./vendor/cm.js";
 
       // ── State ─────────────────────────────────────────────────────────────
       let skills = [];
@@ -242,8 +280,31 @@
       let serverToken = getCookie("skila_token") ?? "";
       let activeTab = "skills";
       let activeEditorTab = "skill";
+      let activeView = "raw";          // "raw" | "preview"
+      let activeFilePath = null;       // null = SKILL.md; otherwise relative path inside skill dir
+      let activeFileMtime = null;      // mtime of currently loaded supporting file (for optimistic concurrency)
       let versions = [];
       let feedback = null;
+
+      // ── Text-file allowlist (must match server-side TEXT_EXT_ALLOWLIST in api/files.ts) ──
+      const TEXT_EXTS = new Set([
+        ".md",".txt",".json",".yaml",".yml",
+        ".ts",".tsx",".js",".jsx",".mjs",".cjs",
+        ".py",".sh",".bash",".zsh",
+        ".toml",".ini",".env",
+        ".css",".scss",".html",".xml",".csv",
+        ".gitignore",
+      ]);
+      function isTextFile(path) {
+        const base = path.toLowerCase().split("/").pop() ?? "";
+        if (base === ".gitignore" || base === ".env") return true;
+        const dot = base.lastIndexOf(".");
+        if (dot < 0) return false;
+        return TEXT_EXTS.has(base.slice(dot));
+      }
+      function isMarkdownFile(path) {
+        return path.toLowerCase().endsWith(".md");
+      }
 
       // ── Helpers ───────────────────────────────────────────────────────────
       function getCookie(name) {
@@ -299,17 +360,67 @@
           b.className = `editor-tab px-2 py-1 text-xs rounded ${active ? "bg-[#21262d] text-[#e6edf3]" : "text-[#8b949e] hover:text-[#e6edf3]"}`;
         });
         const editorEl = document.getElementById("editor");
+        const previewEl = document.getElementById("preview");
         const fileListEl = document.getElementById("file-list-view");
         if (etab === "skill") {
-          editorEl.classList.remove("hidden");
+          // Reset to SKILL.md
+          activeFilePath = null;
+          activeFileMtime = null;
           fileListEl.classList.add("hidden");
+          updateSubbarVisibility();
           if (selectedSkill) loadEditorContent(selectedSkill);
         } else {
+          // Show file list
           editorEl.classList.add("hidden");
+          previewEl.classList.add("hidden");
           fileListEl.classList.remove("hidden");
+          document.getElementById("editor-subbar").classList.add("hidden");
           renderFileList(etab);
         }
       }
+
+      // Show/hide editor-subbar (Raw/Preview row) based on what's loaded
+      function updateSubbarVisibility() {
+        const subbar = document.getElementById("editor-subbar");
+        const viewMode = document.getElementById("view-mode");
+        const crumb = document.getElementById("active-file-crumb");
+        const isMd = activeFilePath === null || isMarkdownFile(activeFilePath);
+        subbar.classList.remove("hidden");
+        viewMode.classList.toggle("hidden", !isMd);
+        crumb.textContent = activeFilePath === null ? "SKILL.md" : activeFilePath;
+        // Non-markdown files cannot use Preview — force Raw
+        if (!isMd && activeView === "preview") {
+          activeView = "raw";
+          renderViewMode();
+        } else {
+          renderViewMode();
+        }
+      }
+
+      function renderViewMode() {
+        const editorEl = document.getElementById("editor");
+        const previewEl = document.getElementById("preview");
+        document.getElementById("view-raw").classList.toggle("active", activeView === "raw");
+        document.getElementById("view-preview").classList.toggle("active", activeView === "preview");
+        if (activeView === "preview") {
+          editorEl.classList.add("hidden");
+          previewEl.classList.remove("hidden");
+          // Render current buffer (not stale disk)
+          const src = cmView ? cmView.state.doc.toString() : "";
+          try {
+            previewEl.innerHTML = marked.parse(src);
+          } catch (e) {
+            previewEl.innerHTML = `<pre style="color:#f85149">Preview render error: ${String(e)}</pre>`;
+          }
+        } else {
+          previewEl.classList.add("hidden");
+          editorEl.classList.remove("hidden");
+        }
+      }
+
+      // Wire view-mode pills
+      document.getElementById("view-raw").addEventListener("click", () => { activeView = "raw"; renderViewMode(); });
+      document.getElementById("view-preview").addEventListener("click", () => { activeView = "preview"; renderViewMode(); });
 
       function renderFileList(etab) {
         if (!selectedSkill) return;
@@ -320,22 +431,38 @@
         if (files.length === 0) {
           ul.innerHTML = `<li class="text-[#484f58] italic">No ${etab} files</li>`;
         } else {
-          ul.innerHTML = files.map(f =>
-            `<li><button class="text-[#58a6ff] hover:underline text-left" onclick="loadFile('${encodeURIComponent(f)}')">${f}</button></li>`
-          ).join("");
+          ul.innerHTML = files.map(f => {
+            const editable = isTextFile(f);
+            if (editable) {
+              return `<li><button class="text-[#58a6ff] hover:underline text-left" data-fpath="${encodeURIComponent(f)}">${f}</button></li>`;
+            }
+            return `<li><span class="text-[#484f58] cursor-not-allowed" title="binary file (open externally)">${f}</span></li>`;
+          }).join("");
+          ul.querySelectorAll("button[data-fpath]").forEach(btn => {
+            btn.addEventListener("click", () => loadFile(btn.dataset.fpath));
+          });
         }
       }
 
-      window.loadFile = async function(encodedPath) {
+      async function loadFile(encodedPath) {
         if (!selectedName) return;
         const path = decodeURIComponent(encodedPath);
         const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/file?path=${encodeURIComponent(path)}`);
-        if (!r.ok) return;
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          alert(`Failed to load file: ${d.error ?? r.status}`);
+          return;
+        }
         const d = await r.json();
+        activeFilePath = path;
+        activeFileMtime = d.mtime ?? null;
         document.getElementById("file-list-view").classList.add("hidden");
         document.getElementById("editor").classList.remove("hidden");
-        loadContentIntoEditor(d.content, false);
-      };
+        loadContentIntoEditor(d.content, true);
+        updateSubbarVisibility();
+        document.getElementById("mtime-indicator").textContent = activeFileMtime ? `saved ${relativeTime(activeFileMtime)}` : "";
+      }
+      window.loadFile = loadFile;
 
       // ── CodeMirror setup ─────────────────────────────────────────────────
       function initEditor(content, editable = true) {
@@ -359,6 +486,12 @@
                 dirty = update.state.doc.toString() !== originalDoc;
                 document.getElementById("btn-save").disabled = !dirty;
                 document.getElementById("btn-discard").disabled = !dirty;
+                // Live re-render preview if it's currently shown
+                if (activeView === "preview") {
+                  const previewEl = document.getElementById("preview");
+                  try { previewEl.innerHTML = marked.parse(update.state.doc.toString()); }
+                  catch { /* ignore transient parse errors */ }
+                }
               }
             }),
             keymap.of([{ key: "Mod-s", run: () => { doSave(); return true; } }]),
@@ -381,6 +514,10 @@
         loadContentIntoEditor(content, true);
         const mi = document.getElementById("mtime-indicator");
         if (skill.mtime) mi.textContent = `saved ${relativeTime(skill.mtime)}`;
+        // Reset to SKILL.md context and refresh subbar
+        activeFilePath = null;
+        activeFileMtime = null;
+        if (typeof updateSubbarVisibility === "function") updateSubbarVisibility();
       }
 
       // ── Skill list rendering ──────────────────────────────────────────────
@@ -580,25 +717,52 @@
       async function doSave() {
         if (!selectedName || !cmView) return;
         const content = cmView.state.doc.toString();
-        const r = await api(`/api/skills/${encodeURIComponent(selectedName)}`, {
-          method: "PUT",
-          body: JSON.stringify({ content, mtime: currentMtime }),
-        });
-        const d = await r.json();
-        if (!r.ok) { alert(`Save failed: ${d.error ?? JSON.stringify(d)}`); return; }
-        originalDoc = content;
-        dirty = false;
-        currentMtime = d.mtime;
-        document.getElementById("btn-save").disabled = true;
-        document.getElementById("btn-discard").disabled = true;
-        document.getElementById("mtime-indicator").textContent = `saved just now`;
-        // Re-fetch skill to update version / details
-        await selectSkill(selectedName);
+
+        // Branch: SKILL.md vs supporting file
+        if (activeFilePath === null) {
+          const r = await api(`/api/skills/${encodeURIComponent(selectedName)}`, {
+            method: "PUT",
+            body: JSON.stringify({ content, mtime: currentMtime }),
+          });
+          const d = await r.json();
+          if (!r.ok) {
+            const detail = Array.isArray(d.errors) ? "\n• " + d.errors.join("\n• ") : "";
+            alert(`Save failed: ${d.error ?? JSON.stringify(d)}${detail}`); return;
+          }
+          originalDoc = content;
+          dirty = false;
+          currentMtime = d.mtime;
+          document.getElementById("btn-save").disabled = true;
+          document.getElementById("btn-discard").disabled = true;
+          document.getElementById("mtime-indicator").textContent = `saved just now`;
+          await selectSkill(selectedName);
+        } else {
+          const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/file`, {
+            method: "PUT",
+            body: JSON.stringify({ path: activeFilePath, content, mtime: activeFileMtime }),
+          });
+          const d = await r.json();
+          if (!r.ok) {
+            const detail = Array.isArray(d.errors) ? "\n• " + d.errors.join("\n• ") : "";
+            alert(`Save failed: ${d.error ?? JSON.stringify(d)}${detail}`); return;
+          }
+          originalDoc = content;
+          dirty = false;
+          activeFileMtime = d.mtime;
+          document.getElementById("btn-save").disabled = true;
+          document.getElementById("btn-discard").disabled = true;
+          document.getElementById("mtime-indicator").textContent = `saved just now`;
+        }
       }
 
       function doDiscard() {
-        if (!selectedSkill) return;
-        loadEditorContent(selectedSkill);
+        if (activeFilePath === null) {
+          if (!selectedSkill) return;
+          loadEditorContent(selectedSkill);
+        } else {
+          // Reload supporting file from disk
+          loadFile(encodeURIComponent(activeFilePath));
+        }
       }
 
       document.getElementById("btn-save").addEventListener("click", doSave);

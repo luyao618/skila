@@ -4,7 +4,7 @@
 
 import { join } from "node:path";
 import { readFileSync } from "node:fs";
-import type { DistillCandidate, SkillProposal, WarningRecord, JudgeOutput, SkillFrontmatter } from "../types.js";
+import type { DistillCandidate, SkillProposal, WarningRecord, JudgeOutput, SkillFrontmatter, SkilaMetadata } from "../types.js";
 import { extractCandidateFromFixture } from "../distill/extractor.js";
 import { scanInventory, findSkill } from "../inventory/scanner.js";
 import { callJudge } from "../judge/judge.js";
@@ -46,7 +46,7 @@ export async function runDistill(opts: DistillOptions): Promise<DistillResult> {
   let proposal: SkillProposal;
   if (mode === "UPDATE" && target) {
     const existing = findSkill(target)!;
-    const parentVersion = existing.frontmatter.skila?.version ?? "0.0.0";
+    const parentVersion = existing.skila.version || "0.0.0";
     const newVersion = bumpVersion(parentVersion, output.suggested_version_bump ?? "minor");
     proposal = {
       name: target,
@@ -75,26 +75,26 @@ export async function runDistill(opts: DistillOptions): Promise<DistillResult> {
     return { proposal, judgeOutput: output, warnings };
   }
 
-  // Build frontmatter and write to .draft-skila/<name>/SKILL.md
+  // Build clean frontmatter (no skila block) + sidecar metadata.
   const fm: SkillFrontmatter = {
     name: proposal.name,
     description: proposal.description,
     compatibility: { node: ">=20" },
-    skila: {
-      version: proposal.newVersion,
-      status: "draft",
-      parentVersion: proposal.parentVersion ?? null,
-      revisionCount: proposal.mode === "UPDATE" ? 1 : 0,
-      lastImprovedAt: new Date().toISOString(),
-      changelog: [],
-      source: proposal.mode === "UPDATE" ? "skila-revise" : "skila-distill"
-    }
   };
-  appendChangelog(fm, proposal.newVersion, proposal.changelogEntry);
+  const sidecar: SkilaMetadata = {
+    version: proposal.newVersion,
+    status: "draft",
+    parentVersion: proposal.parentVersion ?? null,
+    revisionCount: proposal.mode === "UPDATE" ? 1 : 0,
+    lastImprovedAt: new Date().toISOString(),
+    changelog: [],
+    source: proposal.mode === "UPDATE" ? "skila-revise" : "skila-distill"
+  };
+  appendChangelog(sidecar, proposal.newVersion, proposal.changelogEntry);
 
   const draftDir = join(statusDir("draft"), proposal.name);
-  const file = await writeSkillFile(draftDir, fm, proposal.body || `# ${proposal.name}\n\n${proposal.description}\n`);
-  // Validate after write
+  const file = await writeSkillFile(draftDir, fm, proposal.body || `# ${proposal.name}\n\n${proposal.description}\n`, sidecar);
+  // Validate after write (SKILL.md only — sidecar is schema-validated elsewhere).
   validateSkillContent(readFileSync(file, "utf8"), { expectedDirName: proposal.name });
 
   return { proposal, judgeOutput: output, warnings, draftPath: file };

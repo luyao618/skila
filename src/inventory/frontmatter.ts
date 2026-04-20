@@ -1,7 +1,13 @@
 // YAML frontmatter parser/serializer.
 // Round-trip preserves key order. Status enum: 5 values.
+//
+// NOTE (sidecar refactor): SKILL.md no longer stores `skila:` bookkeeping —
+// that lives in a sidecar `.skila.json`. The parser still tolerates a legacy
+// `skila:` key (for migration); the serializer always strips it so writes
+// produce a clean SKILL.md.
 
-import type { SkillFrontmatter, SkillStatus } from "../types.js";
+import type { SkillFrontmatter, SkillStatus, SkilaMetadata } from "../types.js";
+import { normalizeSkila } from "./sidecar.js";
 
 const STATUS_VALUES: SkillStatus[] = ["draft", "staging", "published", "archived", "disabled"];
 const NAME_REGEX = /^[a-z0-9][a-z0-9._-]*$/;
@@ -10,6 +16,8 @@ export interface ParsedFrontmatter {
   frontmatter: SkillFrontmatter;
   body: string;
   raw: string;
+  /** Present only when the source file still has a legacy `skila:` block. */
+  legacySkila?: SkilaMetadata;
 }
 
 export function isValidStatus(s: unknown): s is SkillStatus {
@@ -172,11 +180,28 @@ export function parseSkillFile(raw: string): ParsedFrontmatter {
   let bodyStart = end + 4;
   if (raw[bodyStart] === "\n") bodyStart += 1;
   const body = raw.slice(bodyStart);
-  const parsed = parseYamlSubset(yamlSection);
-  return { frontmatter: parsed as unknown as SkillFrontmatter, body, raw };
+  const parsedRaw = parseYamlSubset(yamlSection) as Record<string, unknown>;
+
+  // Capture and strip legacy `skila:` block so callers don't accidentally
+  // depend on it in the new world.
+  let legacySkila: SkilaMetadata | undefined;
+  if (parsedRaw.skila && typeof parsedRaw.skila === "object") {
+    legacySkila = normalizeSkila(parsedRaw.skila);
+    delete parsedRaw.skila;
+  }
+
+  return {
+    frontmatter: parsedRaw as unknown as SkillFrontmatter,
+    body,
+    raw,
+    legacySkila
+  };
 }
 
 export function serializeSkillFile(frontmatter: SkillFrontmatter, body: string): string {
-  const yaml = serializeYaml(frontmatter as unknown as Record<string, unknown>);
+  // Defensive: never emit a `skila:` block in SKILL.md anymore.
+  const fm = { ...(frontmatter as Record<string, unknown>) };
+  delete fm.skila;
+  const yaml = serializeYaml(fm);
   return `---\n${yaml}\n---\n${body}`;
 }

@@ -8,6 +8,7 @@ import { join, dirname } from "node:path";
 import { StorageAdapterError } from "./types.js";
 import { ensureSkilaHome, statusDir } from "../config/config.js";
 import { atomicWriteFileSync } from "./atomic.js";
+import { sidecarPathFor, serializeSidecar, SIDECAR_FILENAME } from "../inventory/sidecar.js";
 const execFileP = promisify(execFile);
 function skillPath(name, status) {
     return join(statusDir(status), name, "SKILL.md");
@@ -35,7 +36,7 @@ export class FlatFileStorage {
         mkdirSync(join(ensureSkilaHome(), "versions"), { recursive: true });
     }
     async writeSkill(name, version, content, metadata) {
-        // 1. Snapshot to versions/<name>/v<version>/
+        // 1. Snapshot to versions/<name>/v<version>/ — both SKILL.md and sidecar.
         const { dir, file, meta } = versionPath(name, version);
         mkdirSync(dir, { recursive: true });
         atomicWriteFileSync(file, content);
@@ -45,10 +46,18 @@ export class FlatFileStorage {
             message: metadata.message,
             status: metadata.status
         }, null, 2));
-        // 2. Write live SKILL.md atomically into status dir
+        let sidecarBytes;
+        if (metadata.sidecar) {
+            sidecarBytes = serializeSidecar(metadata.sidecar);
+            atomicWriteFileSync(join(dir, SIDECAR_FILENAME), sidecarBytes);
+        }
+        // 2. Write live SKILL.md atomically into status dir (and the sidecar).
         const live = skillPath(name, metadata.status);
         mkdirSync(dirname(live), { recursive: true });
         atomicWriteFileSync(live, content);
+        if (sidecarBytes) {
+            atomicWriteFileSync(sidecarPathFor(live), sidecarBytes);
+        }
     }
     async moveSkill(name, _fromStatus, toStatus) {
         const located = findSkillPathAnyStatus(name);
@@ -116,6 +125,20 @@ export class FlatFileStorage {
         }
         out.sort((a, b) => (a.date < b.date ? 1 : -1));
         return out;
+    }
+    async writeFile(name, relativePath, content, _opts) {
+        if (relativePath === "SKILL.md" || relativePath.endsWith("/SKILL.md")) {
+            throw new StorageAdapterError("E_USE_WRITE_SKILL", "use writeSkill() for SKILL.md (frontmatter validation + version bump)");
+        }
+        if (relativePath.includes("..")) {
+            throw new StorageAdapterError("E_BAD_PATH", `path traversal not allowed: ${relativePath}`);
+        }
+        const located = findSkillPathAnyStatus(name);
+        if (!located)
+            throw new StorageAdapterError("E_NOT_FOUND", `flat: skill not found: ${name}`);
+        const target = join(dirname(located.file), relativePath);
+        mkdirSync(dirname(target), { recursive: true });
+        atomicWriteFileSync(target, content);
     }
     async diff(name, from, to) {
         const a = versionPath(name, from).file;

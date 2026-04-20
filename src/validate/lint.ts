@@ -23,8 +23,5 @@ export function lintSkillContent(raw: string): LintWarning[] {
   if (parsed.body.trim().length < 100) {
     warnings.push({ rule: "body-too-short", message: "skill body <100 chars; might lack instructions" });
   }
-  if (fm.skila && Array.isArray(fm.skila.changelog) && fm.skila.changelog.length === 0) {
-    warnings.push({ rule: "empty-changelog", message: "changelog is empty" });
-  }
   return warnings;
 }

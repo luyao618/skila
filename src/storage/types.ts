@@ -1,7 +1,7 @@
 // StorageAdapter contract (Phase 4 — AC19/AC20/AC21/AC22).
 // Implementations: src/storage/git.ts (GitBackedStorage), src/storage/flat.ts (FlatFileStorage).
 
-import type { SkillStatus } from "../types.js";
+import type { SkillStatus, SkilaMetadata } from "../types.js";
 
 export interface VersionRecord {
   version: string;
@@ -12,6 +12,8 @@ export interface VersionRecord {
 export interface WriteSkillMetadata {
   message: string;
   status: SkillStatus;
+  /** Optional sidecar metadata; written atomically next to SKILL.md when present. */
+  sidecar?: SkilaMetadata;
 }
 
 export interface StorageAdapter {
@@ -23,6 +25,15 @@ export interface StorageAdapter {
   getVersion(name: string, version: string): Promise<string>;
   listVersions(name: string): Promise<VersionRecord[]>;
   diff(name: string, from: string, to: string): Promise<string>;
+  /**
+   * Write a supporting file (anything other than SKILL.md) inside a skill directory.
+   * Git adapter records a commit; flat adapter just writes the file.
+   * @param name the skill name (used to locate the skill dir)
+   * @param relativePath path relative to the skill dir (e.g. "scripts/foo.ts")
+   * @param content new file contents
+   * @param opts.message optional git commit message (git adapter only)
+   */
+  writeFile(name: string, relativePath: string, content: string, opts?: { message?: string }): Promise<void>;
 }
 
 export class StorageAdapterError extends Error {

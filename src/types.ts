@@ -1,21 +1,39 @@
 // Shared TS types for skila Phase 2.
 
 export type SkillStatus = "draft" | "staging" | "published" | "archived" | "disabled";
+export type SkilaSource = "skila-distill" | "skila-revise" | "user-edit-via-web" | "skila-rollback";
 
+/**
+ * On-disk SKILL.md frontmatter shape (what Claude Code reads).
+ * Skila bookkeeping lives in a sidecar `.skila.json` (see SkilaMetadata) and is
+ * NOT stored here.
+ */
 export interface SkillFrontmatter {
   name: string;
   description: string;
   compatibility?: { node?: string; python?: string };
-  skila: {
-    version: string;
-    status: SkillStatus;
-    parentVersion: string | null;
-    revisionCount: number;
-    lastImprovedAt: string;
-    changelog: { version: string; date: string; change: string }[];
-    source: "skila-distill" | "skila-revise" | "user-edit-via-web" | "skila-rollback";
-  };
   [k: string]: unknown;
+}
+
+/**
+ * Sidecar metadata stored in `<skill-dir>/.skila.json`.
+ * Keeps version/changelog/etc. out of SKILL.md so the user-edited markdown
+ * stays clean and round-trips byte-for-byte.
+ */
+export interface SkilaChangelogEntry {
+  version: string;
+  date: string;
+  change: string;
+}
+
+export interface SkilaMetadata {
+  version: string;
+  status: SkillStatus;
+  parentVersion: string | null;
+  revisionCount: number;
+  lastImprovedAt: string;
+  changelog: SkilaChangelogEntry[];
+  source?: SkilaSource;
 }
 
 export interface Skill {
@@ -24,6 +42,7 @@ export interface Skill {
   path: string;
   frontmatter: SkillFrontmatter;
   body: string;
+  skila: SkilaMetadata;
 }
 
 export interface SkillProposal {

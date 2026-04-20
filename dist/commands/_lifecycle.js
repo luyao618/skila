@@ -2,12 +2,17 @@
 // Phase 4: routes writes through StorageAdapter (git or flat). Live tree
 // mirroring is performed by the adapter (or by this module's fallback) so
 // existing Phase 2 contracts are preserved.
-import { existsSync, mkdirSync, renameSync, rmSync, readFileSync, copyFileSync, statSync, readdirSync } from "node:fs";
+//
+// Sidecar refactor: skila bookkeeping (version/changelog/source/etc.) lives
+// in `<dir>/.skila.json`, NOT in SKILL.md frontmatter. Helpers here read +
+// mutate the sidecar object explicitly and pass it to the storage adapter.
+import { existsSync, mkdirSync, renameSync, rmSync, copyFileSync, statSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { statusDir } from "../config/config.js";
-import { parseSkillFile, serializeSkillFile } from "../inventory/frontmatter.js";
+import { serializeSkillFile } from "../inventory/frontmatter.js";
 import { atomicWriteFileSync } from "../storage/atomic.js";
 import { getAdapter } from "../storage/index.js";
+import { writeSidecar, readSidecar } from "../inventory/sidecar.js";
 function copyDirRecursive(src, dst) {
     mkdirSync(dst, { recursive: true });
     for (const entry of readdirSync(src)) {
@@ -45,21 +50,23 @@ export async function moveSkillDir(skill, newStatus) {
             throw err;
         }
     }
-    // Update frontmatter status atomically via adapter (records history).
+    // Update sidecar (status + lastImprovedAt) atomically.
     const skillFile = join(destDir, "SKILL.md");
-    const raw = readFileSync(skillFile, "utf8");
-    const parsed = parseSkillFile(raw);
-    parsed.frontmatter.skila.status = newStatus;
-    parsed.frontmatter.skila.lastImprovedAt = new Date().toISOString();
-    const serialized = serializeSkillFile(parsed.frontmatter, parsed.body);
-    // Write live + adapter history
-    atomicWriteFileSync(skillFile, serialized);
+    const sidecar = {
+        ...skill.skila,
+        status: newStatus,
+        lastImprovedAt: new Date().toISOString(),
+    };
+    writeSidecar(skillFile, sidecar);
+    // Record adapter history (rewrites SKILL.md as-is + sidecar).
     try {
         const adapter = await getAdapter();
         await adapter.moveSkill(skill.name, skill.status, newStatus);
-        await adapter.writeSkill(skill.name, parsed.frontmatter.skila.version, serialized, {
+        const raw = serializeSkillFile(skill.frontmatter, skill.body);
+        await adapter.writeSkill(skill.name, sidecar.version, raw, {
             message: `move ${skill.name}: ${skill.status}->${newStatus}`,
-            status: newStatus
+            status: newStatus,
+            sidecar
         });
     }
     catch (err) {
@@ -69,10 +76,10 @@ export async function moveSkillDir(skill, newStatus) {
     }
     return destDir;
 }
-export function appendChangelog(fm, version, change) {
-    if (!Array.isArray(fm.skila.changelog))
-        fm.skila.changelog = [];
-    fm.skila.changelog.push({ version, date: new Date().toISOString(), change });
+export function appendChangelog(meta, version, change) {
+    if (!Array.isArray(meta.changelog))
+        meta.changelog = [];
+    meta.changelog.push({ version, date: new Date().toISOString(), change });
 }
 export function bumpVersion(version, kind) {
     const m = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
@@ -93,18 +100,24 @@ export function bumpVersion(version, kind) {
         patch++;
     return `${major}.${minor}.${patch}`;
 }
-export async function writeSkillFile(dir, fm, body) {
+/**
+ * Write SKILL.md (clean frontmatter + body) AND its sidecar to disk + adapter
+ * history. Returns the SKILL.md path.
+ */
+export async function writeSkillFile(dir, fm, body, sidecar) {
     mkdirSync(dir, { recursive: true });
     const file = join(dir, "SKILL.md");
     const serialized = serializeSkillFile(fm, body);
-    // Live write (Phase 2 contract: file exists immediately after this returns).
+    // Live writes (Phase 2 contract: file exists immediately after this returns).
     atomicWriteFileSync(file, serialized);
+    writeSidecar(file, sidecar);
     // Adapter history.
     try {
         const adapter = await getAdapter();
-        await adapter.writeSkill(fm.name, fm.skila.version, serialized, {
-            message: `${fm.skila.source} ${fm.name} v${fm.skila.version}`,
-            status: fm.skila.status
+        await adapter.writeSkill(fm.name, sidecar.version, serialized, {
+            message: `${sidecar.source ?? "skila"} ${fm.name} v${sidecar.version}`,
+            status: sidecar.status,
+            sidecar
         });
     }
     catch (err) {
@@ -115,10 +128,14 @@ export async function writeSkillFile(dir, fm, body) {
 }
 // Synchronous live-tree-only write helper, used by paths that must not await
 // (e.g. validation prefetch). Does NOT record history.
-export function writeSkillFileLiveOnly(dir, fm, body) {
+export function writeSkillFileLiveOnly(dir, fm, body, sidecar) {
     mkdirSync(dir, { recursive: true });
     const file = join(dir, "SKILL.md");
     atomicWriteFileSync(file, serializeSkillFile(fm, body));
+    if (sidecar)
+        writeSidecar(file, sidecar);
     return file;
 }
+// Re-export for callers that previously imported via this module.
+export { readSidecar };
 //# sourceMappingURL=_lifecycle.js.map

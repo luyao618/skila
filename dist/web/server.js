@@ -3,14 +3,16 @@ import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { URL } from "node:url";
-import { generateToken, getTokenFromCookie, setTokenCookie, validateToken, sendJson } from "./middleware/token.js";
+import { generateToken, setTokenCookie, validateToken, sendJson } from "./middleware/token.js";
 // API handlers
 import { handleGetSkills, handleGetSkill, handlePutSkill, handlePostFeedback } from "./api/skills.js";
-import { handleGetFile } from "./api/files.js";
+import { handleGetFile, handlePutFile } from "./api/files.js";
 import { handleGetVersions, handleGetDiff } from "./api/versions.js";
 import { handleLifecycle } from "./api/lifecycle.js";
 import { handleGetFeedback } from "./api/feedback.js";
 import { handleGetDashboard } from "./api/dashboard.js";
+import { runMigrateSidecar } from "../inventory/migrate.js";
+let sidecarMigrationRan = false;
 /** Resolve the dist/web directory — next to this file at runtime, or injected for tests. */
 function defaultDistDir() {
     // At runtime dist/web/server.js → dist/web/
@@ -25,6 +27,27 @@ export async function startServer(opts = {}) {
     const distDir = opts.distDir ?? defaultDistDir();
     const serverToken = generateToken();
     const basePort = opts.port ?? 7777;
+    // Auto-run sidecar migration once per process (idempotent). Ensures skills
+    // that still have a `skila:` block in SKILL.md are split into the new
+    // `.skila.json` sidecar layout before the API serves reads/writes.
+    if (!sidecarMigrationRan) {
+        sidecarMigrationRan = true;
+        try {
+            const r = runMigrateSidecar();
+            if (r.migrated > 0) {
+                process.stderr.write(`skila: migrated ${r.migrated} skills to sidecar layout\n`);
+            }
+            if (r.errors.length > 0) {
+                process.stderr.write(`skila: sidecar migration had ${r.errors.length} errors\n`);
+                for (const e of r.errors) {
+                    process.stderr.write(`  - ${e.path}: ${e.error}\n`);
+                }
+            }
+        }
+        catch (err) {
+            process.stderr.write(`skila: sidecar migration failed: ${err.message}\n`);
+        }
+    }
     const server = createServer(async (req, res) => {
         try {
             await route(req, res, distDir, serverToken);
@@ -71,10 +94,9 @@ async function route(req, res, distDir, serverToken) {
             return;
         }
         let html = readFileSync(indexPath, "utf8");
-        // Set token cookie if absent
-        if (!getTokenFromCookie(req)) {
-            setTokenCookie(res, serverToken);
-        }
+        // Always (re)issue the token cookie on the index page so a browser holding
+        // a stale cookie from a previous server run gets refreshed automatically.
+        setTokenCookie(res, serverToken);
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
         res.end(html);
         return;
@@ -113,6 +135,13 @@ async function route(req, res, distDir, serverToken) {
         if (method === "GET" && sub === "file") {
             const filePath = url.searchParams.get("path") ?? "";
             await handleGetFile(req, res, name, filePath);
+            return;
+        }
+        // PUT /api/skills/:name/file — write supporting (non-SKILL.md) text file
+        if (method === "PUT" && sub === "file") {
+            if (!validateToken(req, res, serverToken))
+                return;
+            await handlePutFile(req, res, name);
             return;
         }
         // GET /api/skills/:name/versions

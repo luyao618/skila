@@ -1,5 +1,11 @@
 // YAML frontmatter parser/serializer.
 // Round-trip preserves key order. Status enum: 5 values.
+//
+// NOTE (sidecar refactor): SKILL.md no longer stores `skila:` bookkeeping —
+// that lives in a sidecar `.skila.json`. The parser still tolerates a legacy
+// `skila:` key (for migration); the serializer always strips it so writes
+// produce a clean SKILL.md.
+import { normalizeSkila } from "./sidecar.js";
 const STATUS_VALUES = ["draft", "staging", "published", "archived", "disabled"];
 const NAME_REGEX = /^[a-z0-9][a-z0-9._-]*$/;
 export function isValidStatus(s) {
@@ -170,11 +176,26 @@ export function parseSkillFile(raw) {
     if (raw[bodyStart] === "\n")
         bodyStart += 1;
     const body = raw.slice(bodyStart);
-    const parsed = parseYamlSubset(yamlSection);
-    return { frontmatter: parsed, body, raw };
+    const parsedRaw = parseYamlSubset(yamlSection);
+    // Capture and strip legacy `skila:` block so callers don't accidentally
+    // depend on it in the new world.
+    let legacySkila;
+    if (parsedRaw.skila && typeof parsedRaw.skila === "object") {
+        legacySkila = normalizeSkila(parsedRaw.skila);
+        delete parsedRaw.skila;
+    }
+    return {
+        frontmatter: parsedRaw,
+        body,
+        raw,
+        legacySkila
+    };
 }
 export function serializeSkillFile(frontmatter, body) {
-    const yaml = serializeYaml(frontmatter);
+    // Defensive: never emit a `skila:` block in SKILL.md anymore.
+    const fm = { ...frontmatter };
+    delete fm.skila;
+    const yaml = serializeYaml(fm);
     return `---\n${yaml}\n---\n${body}`;
 }
 //# sourceMappingURL=frontmatter.js.map

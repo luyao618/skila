@@ -24,6 +24,7 @@ import { recordInvocation } from "../../src/feedback/store.js";
 import { findSkill } from "../../src/inventory/scanner.js";
 import { feedbackPath } from "../../src/feedback/store.js";
 import { parseSkillFile } from "../../src/inventory/frontmatter.js";
+import { readSidecar } from "../../src/inventory/sidecar.js";
 import { statusDir } from "../../src/config/config.js";
 
 const E2E_SESSION_1 = join(process.cwd(), "tests", "fixtures", "sessions", "e2e-1.md");
@@ -123,11 +124,12 @@ describe.each([
       expect(distill1.draftPath).toMatch(/\.draft-skila\/azure-pipeline-debug\/SKILL\.md$/);
       expect(existsSync(distill1.draftPath!)).toBe(true);
 
-      // Assert frontmatter v0.1.0
+      // Assert sidecar (skila bookkeeping now lives in .skila.json)
       const raw1 = readFileSync(distill1.draftPath!, "utf8");
-      const parsed1 = parseSkillFile(raw1);
-      expect(parsed1.frontmatter.skila.version).toBe("0.1.0");
-      expect(parsed1.frontmatter.skila.status).toBe("draft");
+      parseSkillFile(raw1); // sanity
+      const side1 = readSidecar(distill1.draftPath!);
+      expect(side1.version).toBe("0.1.0");
+      expect(side1.status).toBe("draft");
 
       // Storage history: git log OR flat versions dir
       if (forceFlat) {
@@ -163,10 +165,11 @@ describe.each([
       expect(distill2.draftPath).toMatch(/\.draft-skila\/azure-pipeline-debug\/SKILL\.md$/);
 
       const raw2 = readFileSync(distill2.draftPath!, "utf8");
-      const parsed2 = parseSkillFile(raw2);
-      expect(parsed2.frontmatter.skila.version).toBe("0.2.0");
-      expect(parsed2.frontmatter.skila.parentVersion).toBe("0.1.0");
-      expect(parsed2.frontmatter.skila.status).toBe("draft");
+      parseSkillFile(raw2);
+      const side2 = readSidecar(distill2.draftPath!);
+      expect(side2.version).toBe("0.2.0");
+      expect(side2.parentVersion).toBe("0.1.0");
+      expect(side2.status).toBe("draft");
 
       // ----------------------------------------------------------
       // Step 5: auto-stage → .staging-skila/ (usage threshold ≥10)
@@ -192,12 +195,15 @@ describe.each([
       const graduatedSkill = findSkill(SKILL_NAME);
       expect(graduatedSkill?.status).toBe("published");
       const raw6 = readFileSync(graduatedSkill!.path, "utf8");
-      const parsed6 = parseSkillFile(raw6);
-      expect(parsed6.frontmatter.skila.version).toBe("0.2.0");
+      parseSkillFile(raw6);
+      const side6 = readSidecar(graduatedSkill!.path);
+      expect(side6.version).toBe("0.2.0");
 
       // Inspect v0.1.0 — history retained
       const inspected = await runInspect(SKILL_NAME, "0.1.0");
-      expect(inspected.content).toContain("version: 0.1.0");
+      // The historical snapshot's content is SKILL.md (no version field inside
+      // anymore — lives in the sidecar). Just sanity check it parses.
+      parseSkillFile(inspected.content);
 
       // ----------------------------------------------------------
       // Step 7: feedback ×3 → usageCount === 13 (10 step5 + 3 here)
@@ -230,10 +236,11 @@ describe.each([
       expect(rolledSkill?.status).toBe("published");
       const raw8 = readFileSync(rolledSkill!.path, "utf8");
       const parsed8 = parseSkillFile(raw8);
-      expect(parsed8.frontmatter.skila.version).toBe("0.3.0");
-      expect(parsed8.frontmatter.skila.revisionCount).toBeGreaterThanOrEqual(1);
+      const side8 = readSidecar(rolledSkill!.path);
+      expect(side8.version).toBe("0.3.0");
+      expect(side8.revisionCount).toBeGreaterThanOrEqual(1);
       // changelog must include a rollback entry
-      const changelogEntries = parsed8.frontmatter.skila.changelog ?? [];
+      const changelogEntries = side8.changelog ?? [];
       expect(changelogEntries.some((e: any) => e.change.includes("Rolled back to v0.1.0"))).toBe(true);
       // Body bytes-equal v0.1.0 — read original body from inspected v0.1.0
       const v1parsed = parseSkillFile(inspected.content);

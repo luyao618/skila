@@ -1,9 +1,10 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { readFileSync } from "node:fs";
 import { makeEnv } from "../_helpers.js";
 import { runDistill } from "../../src/commands/distill.js";
 import { parseSkillFile } from "../../src/inventory/frontmatter.js";
+import { readSidecar } from "../../src/inventory/sidecar.js";
 
 let env: ReturnType<typeof makeEnv>;
 afterEach(() => env?.cleanup());
@@ -19,9 +20,14 @@ describe("AC8 — append-and-revise", () => {
     expect(result.proposal.newVersion).toBe("0.2.0");
     expect(result.draftPath).toMatch(/\.draft-skila\/azure-pipeline-debug\/SKILL\.md$/);
     const raw = readFileSync(result.draftPath!, "utf8");
-    const parsed = parseSkillFile(raw);
-    expect(parsed.frontmatter.skila.parentVersion).toBe("0.1.0");
-    expect(parsed.frontmatter.skila.changelog.length).toBeGreaterThan(0);
-    expect(parsed.frontmatter.skila.changelog[0].change).toMatch(/session-2/);
+    parseSkillFile(raw); // sanity: still parses
+    const sidecar = readSidecar(result.draftPath!);
+    expect(sidecar.parentVersion).toBe("0.1.0");
+    expect(sidecar.changelog.length).toBeGreaterThan(0);
+    expect(sidecar.changelog[0].change).toMatch(/session-2/);
+    // SKILL.md should NOT contain a legacy skila: block
+    expect(raw).not.toMatch(/^skila:/m);
+    void dirname;
   });
 });
+

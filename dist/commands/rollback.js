@@ -3,13 +3,14 @@
 // (git or flat) when possible; falls back to the on-disk versions/<name>/ tree
 // for legacy snapshots.
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { findSkill } from "../inventory/scanner.js";
 import { ensureSkilaHome } from "../config/config.js";
 import { atomicWriteFileSync } from "../storage/atomic.js";
 import { parseSkillFile, serializeSkillFile } from "../inventory/frontmatter.js";
 import { appendChangelog, bumpVersion } from "./_lifecycle.js";
 import { getAdapter } from "../storage/index.js";
+import { readSidecarIfExists, writeSidecar, defaultSkila } from "../inventory/sidecar.js";
 export async function runRollback(name, toVersion) {
     const skill = findSkill(name);
     if (!skill)
@@ -32,26 +33,37 @@ export async function runRollback(name, toVersion) {
         histRaw = readFileSync(histFile, "utf8");
     }
     const histParsed = parseSkillFile(histRaw);
-    const newVersion = bumpVersion(skill.frontmatter.skila.version, "minor");
-    const fm = { ...histParsed.frontmatter };
-    fm.skila = {
-        ...fm.skila,
+    // Reconstruct sidecar for the new version. We keep the live skill's full
+    // changelog and append a rollback entry; body + frontmatter come from the
+    // historical snapshot.
+    const newVersion = bumpVersion(skill.skila.version, "minor");
+    // Prefer the historical sidecar if we can locate it (versions/<name>/v<v>/.skila.json).
+    const home = ensureSkilaHome();
+    const histSidecarPath = join(home, "versions", name, `v${toVersion}`, ".skila.json");
+    const histSidecar = existsSync(histSidecarPath)
+        ? readSidecarIfExists(join(dirname(histSidecarPath), "SKILL.md"))
+        : undefined;
+    const baseSidecar = histSidecar ?? histParsed.legacySkila ?? defaultSkila(skill.status);
+    const sidecar = {
+        ...baseSidecar,
         version: newVersion,
-        parentVersion: skill.frontmatter.skila.version,
-        revisionCount: (skill.frontmatter.skila.revisionCount ?? 0) + 1,
-        lastImprovedAt: new Date().toISOString(),
         status: skill.status,
+        parentVersion: skill.skila.version,
+        revisionCount: (skill.skila.revisionCount ?? 0) + 1,
+        lastImprovedAt: new Date().toISOString(),
         source: "skila-rollback",
-        changelog: [...(skill.frontmatter.skila.changelog ?? [])]
+        changelog: [...(skill.skila.changelog ?? [])],
     };
-    appendChangelog(fm, newVersion, `Rolled back to v${toVersion}`);
-    const serialized = serializeSkillFile(fm, histParsed.body);
+    appendChangelog(sidecar, newVersion, `Rolled back to v${toVersion}`);
+    const serialized = serializeSkillFile(histParsed.frontmatter, histParsed.body);
     atomicWriteFileSync(skill.path, serialized);
+    writeSidecar(skill.path, sidecar);
     try {
         const adapter = await getAdapter();
         await adapter.writeSkill(name, newVersion, serialized, {
             message: `rollback ${name} to v${toVersion}`,
-            status: skill.status
+            status: skill.status,
+            sidecar
         });
     }
     catch (err) {

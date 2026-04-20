@@ -164,9 +164,15 @@
   },
   "hotPaths": [
     {
+      "path": "src/web/index.html",
+      "accessCount": 19,
+      "lastAccessed": 1776676599600,
+      "type": "file"
+    },
+    {
       "path": "src/cli.ts",
-      "accessCount": 15,
-      "lastAccessed": 1776664565023,
+      "accessCount": 17,
+      "lastAccessed": 1776693617966,
       "type": "file"
     },
     {
@@ -194,27 +200,33 @@
       "type": "directory"
     },
     {
+      "path": "src/storage/atomic.ts",
+      "accessCount": 8,
+      "lastAccessed": 1776693175874,
+      "type": "file"
+    },
+    {
       "path": "skills/skila/SKILL.md",
       "accessCount": 7,
       "lastAccessed": 1776579330790,
       "type": "file"
     },
     {
-      "path": "src/storage/atomic.ts",
+      "path": "src/types.ts",
       "accessCount": 7,
-      "lastAccessed": 1776664578201,
+      "lastAccessed": 1776693363775,
+      "type": "file"
+    },
+    {
+      "path": "src/config/config.ts",
+      "accessCount": 6,
+      "lastAccessed": 1776693195163,
       "type": "file"
     },
     {
       "path": "smithery.yaml",
       "accessCount": 5,
       "lastAccessed": 1776664563907,
-      "type": "file"
-    },
-    {
-      "path": "src/config/config.ts",
-      "accessCount": 5,
-      "lastAccessed": 1776664565074,
       "type": "file"
     },
     {
@@ -233,18 +245,6 @@
       "path": "skills/skila/references/proposal-criteria.md",
       "accessCount": 4,
       "lastAccessed": 1776579331425,
-      "type": "file"
-    },
-    {
-      "path": "src/types.ts",
-      "accessCount": 4,
-      "lastAccessed": 1776664564913,
-      "type": "file"
-    },
-    {
-      "path": "src/web/index.html",
-      "accessCount": 4,
-      "lastAccessed": 1776664574753,
       "type": "file"
     },
     {

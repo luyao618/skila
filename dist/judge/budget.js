@@ -12,7 +12,7 @@ export function estimateTokens(s) {
 }
 export function inventoryHash(inventory) {
     const parts = inventory
-        .map((s) => `${s.name}|${s.frontmatter.skila?.version ?? "?"}|${s.frontmatter.skila?.lastImprovedAt ?? ""}`)
+        .map((s) => `${s.name}|${s.skila?.version ?? "?"}|${s.skila?.lastImprovedAt ?? ""}`)
         .sort();
     return createHash("sha256").update(parts.join("\n")).digest("hex");
 }
@@ -64,7 +64,7 @@ export function pruneStaleCache() {
 export function inventorySummary(inv, full) {
     if (full) {
         return inv
-            .map((s) => `- ${s.name} (v${s.frontmatter.skila?.version ?? "?"}, ${s.status}): ${s.frontmatter.description ?? ""}\n  ${s.body.slice(0, 200).replace(/\n/g, " ")}`)
+            .map((s) => `- ${s.name} (v${s.skila?.version ?? "?"}, ${s.status}): ${s.frontmatter.description ?? ""}\n  ${s.body.slice(0, 200).replace(/\n/g, " ")}`)
             .join("\n");
     }
     // degraded: names + descriptions only
@@ -85,8 +85,8 @@ export function buildBudgetedPrompt(inputs) {
     }
     // Truncate inventory first (drop oldest-touched)
     const sortedInv = [...inputs.inventory].sort((a, b) => {
-        const at = a.frontmatter.skila?.lastImprovedAt ?? "";
-        const bt = b.frontmatter.skila?.lastImprovedAt ?? "";
+        const at = a.skila?.lastImprovedAt ?? "";
+        const bt = b.skila?.lastImprovedAt ?? "";
         return at.localeCompare(bt);
     });
     let kept = sortedInv;
@@ -120,8 +120,8 @@ export function buildBudgetedPrompt(inputs) {
     }
     // Last resort: drop inventory entries from the front (oldest first)
     const sortedDeg = [...inputs.inventory].sort((a, b) => {
-        const at = a.frontmatter.skila?.lastImprovedAt ?? "";
-        const bt = b.frontmatter.skila?.lastImprovedAt ?? "";
+        const at = a.skila?.lastImprovedAt ?? "";
+        const bt = b.skila?.lastImprovedAt ?? "";
         return at.localeCompare(bt);
     });
     while (sortedDeg.length > 0 && tokens > budget) {

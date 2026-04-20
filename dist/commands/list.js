@@ -6,7 +6,7 @@ export function runList(filter) {
     return filtered.map((s) => ({
         name: s.name,
         status: s.status,
-        version: s.frontmatter.skila?.version ?? "?"
+        version: s.skila.version || "?"
     }));
 }
 //# sourceMappingURL=list.js.map

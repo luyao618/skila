@@ -3,26 +3,27 @@
 // PUT /api/skills/:name — save SKILL.md edit
 // POST /api/skills/:name/feedback — manual feedback record
 
-import { existsSync, statSync, readdirSync } from "node:fs";
+import { existsSync, statSync, readdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { scanInventory, findSkill } from "../../inventory/scanner.js";
 import { validateSkillContent } from "../../validate/validate.js";
-import { parseSkillFile, serializeSkillFile } from "../../inventory/frontmatter.js";
 import { atomicWriteFileSync } from "../../storage/atomic.js";
 import { getAdapter } from "../../storage/index.js";
 import { incrementUsage } from "../../feedback/store.js";
 import { sendJson } from "../middleware/token.js";
+import { bumpAndAppend, writeSidecar } from "../../inventory/sidecar.js";
+import type { Skill } from "../../types.js";
 
-function skillSummary(s: ReturnType<typeof scanInventory>[number]) {
-  const skila = s.frontmatter.skila ?? {};
+function skillSummary(s: Skill) {
+  const skila = s.skila;
   return {
     name: s.name,
     status: s.status,
-    version: skila.version ?? "0.0.0",
+    version: skila.version || "0.0.0",
     description: s.frontmatter.description ?? "",
     revisionCount: skila.revisionCount ?? 0,
-    lastImprovedAt: skila.lastImprovedAt ?? null,
+    lastImprovedAt: skila.lastImprovedAt || null,
     source: skila.source ?? "unknown",
     parentVersion: skila.parentVersion ?? null,
     warnings: (s.frontmatter as any)._warnings ?? [],
@@ -53,10 +54,13 @@ export async function handleGetSkill(req: IncomingMessage, res: ServerResponse, 
   const scripts = listDirFiles(dir, "scripts");
   const references = listDirFiles(dir, "references");
   const assets = listDirFiles(dir, "assets");
+  // Send SKILL.md as-is — already clean (no skila block). The editor
+  // round-trips disk bytes exactly without any transparent re-injection.
+  const fullContent = readFileSync(skill.path, "utf8");
   sendJson(res, 200, {
     ...skillSummary(skill),
-    body: skill.body,
-    rawContent: skill.body,
+    body: fullContent,
+    rawContent: fullContent,
     scripts,
     references,
     assets,
@@ -80,10 +84,9 @@ export async function handlePutSkill(
   const { content } = payload;
   if (typeof content !== "string") { sendJson(res, 400, { error: "body.content must be a string" }); return; }
 
-  // Validate
-  let fm;
+  // Validate just the SKILL.md (name + description + dir match).
   try {
-    fm = validateSkillContent(content, { expectedDirName: name });
+    validateSkillContent(content, { expectedDirName: name });
   } catch (e: any) {
     sendJson(res, 422, { error: "validation failed", errors: e.errors ?? [e.message] }); return;
   }
@@ -98,20 +101,33 @@ export async function handlePutSkill(
     }
   }
 
-  // Patch source to web
-  fm.skila.source = "user-edit-via-web";
-  fm.skila.lastImprovedAt = new Date().toISOString();
-  const serialized = serializeSkillFile(fm, parseSkillFile(content).body);
-  atomicWriteFileSync(skill.path, serialized);
+  // Bump sidecar and record a changelog entry. Disk SKILL.md = user bytes.
+  const nextSidecar = bumpAndAppend(
+    skill.skila,
+    `web edit (was v${skill.skila.version || "0.0.0"})`,
+    "user-edit-via-web"
+  );
+  // Preserve on-disk status (don't let stale sidecar override reality).
+  nextSidecar.status = skill.status;
+
+  // Write SKILL.md exactly as the user provided it + updated sidecar.
+  atomicWriteFileSync(skill.path, content);
+  writeSidecar(skill.path, nextSidecar);
+
   try {
     const adapter = await getAdapter();
-    await adapter.writeSkill(name, fm.skila.version, serialized, {
-      message: `web-edit ${name} v${fm.skila.version}`,
-      status: fm.skila.status,
+    await adapter.writeSkill(name, nextSidecar.version, content, {
+      message: `web-edit ${name} v${nextSidecar.version}`,
+      status: nextSidecar.status,
+      sidecar: nextSidecar,
     });
   } catch { /* best effort */ }
 
-  sendJson(res, 200, { ok: true, version: fm.skila.version, mtime: statSync(skill.path).mtime.toISOString() });
+  sendJson(res, 200, {
+    ok: true,
+    version: nextSidecar.version,
+    mtime: statSync(skill.path).mtime.toISOString(),
+  });
 }
 
 export async function handlePostFeedback(

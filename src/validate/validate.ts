@@ -1,7 +1,7 @@
 // BLOCKING validation. Throws SkilaValidationError on first error.
 
 import { parseSkillFile, isValidName, isValidStatus } from "../inventory/frontmatter.js";
-import type { SkillFrontmatter } from "../types.js";
+import type { SkillFrontmatter, SkilaMetadata } from "../types.js";
 
 export class SkilaValidationError extends Error {
   errors: string[];
@@ -15,6 +15,10 @@ export interface ValidateOptions {
   expectedDirName?: string;
 }
 
+/**
+ * Validate just the SKILL.md content (name + description + dir-name + path safety).
+ * Skila bookkeeping lives in the sidecar — see validateSkilaMetadata.
+ */
 export function validateSkillContent(raw: string, opts: ValidateOptions = {}): SkillFrontmatter {
   const errors: string[] = [];
   let parsed;
@@ -32,16 +36,24 @@ export function validateSkillContent(raw: string, opts: ValidateOptions = {}): S
   if (opts.expectedDirName && fm.name && fm.name !== opts.expectedDirName) {
     errors.push(`name '${fm.name}' != parent dir '${opts.expectedDirName}'`);
   }
-  if (!fm.skila) errors.push("missing required: skila block");
-  else {
-    if (!isValidStatus(fm.skila.status)) errors.push(`invalid status: ${fm.skila.status}`);
-    if (typeof fm.skila.version !== "string") errors.push("skila.version must be a string");
-    if (!Array.isArray(fm.skila.changelog)) errors.push("skila.changelog must be an array");
-  }
   // Path safety: name must not contain path separators (already enforced by regex)
   if (fm.name && (fm.name.includes("/") || fm.name.includes("\\") || fm.name.includes(".."))) {
     errors.push("name path-unsafe");
   }
   if (errors.length > 0) throw new SkilaValidationError(errors);
   return fm;
+}
+
+/** Validate sidecar metadata (status enum, version string, changelog array). */
+export function validateSkilaMetadata(meta: unknown): SkilaMetadata {
+  const errors: string[] = [];
+  if (!meta || typeof meta !== "object") {
+    throw new SkilaValidationError(["sidecar not an object"]);
+  }
+  const m = meta as Record<string, unknown>;
+  if (!isValidStatus(m.status)) errors.push(`invalid status: ${String(m.status)}`);
+  if (typeof m.version !== "string") errors.push("skila.version must be a string");
+  if (!Array.isArray(m.changelog)) errors.push("skila.changelog must be an array");
+  if (errors.length > 0) throw new SkilaValidationError(errors);
+  return meta as SkilaMetadata;
 }

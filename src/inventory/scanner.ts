@@ -4,6 +4,7 @@ import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Skill, SkillStatus } from "../types.js";
 import { parseSkillFile } from "./frontmatter.js";
+import { readSidecarIfExists, defaultSkila } from "./sidecar.js";
 import { skillsRoot, statusDir } from "../config/config.js";
 
 const ALL_STATUSES: SkillStatus[] = ["draft", "staging", "published", "archived", "disabled"];
@@ -44,12 +45,19 @@ export function scanStatus(status: SkillStatus): Skill[] {
     try {
       const raw = readFileSync(file, "utf8");
       const parsed = parseSkillFile(raw);
+      // Sidecar (preferred) → legacy in-frontmatter (transitional) → defaults.
+      const sidecar = readSidecarIfExists(file);
+      const skila = sidecar ?? parsed.legacySkila ?? defaultSkila(status);
+      // Status on disk (which dir the file lives in) wins over what the
+      // sidecar / legacy block claims, so the inventory matches reality.
+      skila.status = status;
       out.push({
         name: parsed.frontmatter.name ?? entry,
         status,
         path: file,
         frontmatter: parsed.frontmatter,
-        body: parsed.body
+        body: parsed.body,
+        skila
       });
     } catch {
       // ignore unparseable

@@ -117,6 +117,12 @@ async function dispatch(argv) {
             await runServe({ port: portArg });
             return 0; // unreachable
         }
+        case "migrate-sidecar": {
+            const { runMigrateSidecar } = await import("./inventory/migrate.js");
+            const r = runMigrateSidecar();
+            process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+            return r.errors.length > 0 ? 1 : 0;
+        }
         case "stats":
             process.stdout.write(`skila stats: not yet implemented (Phase 3+)\n`);
             return 0;

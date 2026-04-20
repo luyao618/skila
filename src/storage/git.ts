@@ -24,6 +24,7 @@ import type { StorageAdapter, VersionRecord, WriteSkillMetadata } from "./types.
 import { StorageAdapterError } from "./types.js";
 import { ensureSkilaHome, statusDir } from "../config/config.js";
 import { atomicWriteFileSync } from "./atomic.js";
+import { sidecarPathFor, serializeSidecar, SIDECAR_FILENAME } from "../inventory/sidecar.js";
 
 const execFileP = promisify(execFile);
 const GIT_TIMEOUT_MS = 5000;
@@ -89,14 +90,31 @@ export class GitBackedStorage implements StorageAdapter {
     const target = join(this.home, rel);
     mkdirSync(dirname(target), { recursive: true });
     atomicWriteFileSync(target, content);
-    await git(["add", "--", rel], this.home);
+    const addPaths = [rel];
+
+    // Sidecar (`.skila.json`) — written and committed alongside SKILL.md.
+    let sidecarRel: string | undefined;
+    let sidecarBytes: string | undefined;
+    if (metadata.sidecar) {
+      sidecarRel = join(dirname(rel), SIDECAR_FILENAME);
+      sidecarBytes = serializeSidecar(metadata.sidecar);
+      const sidecarTarget = join(this.home, sidecarRel);
+      atomicWriteFileSync(sidecarTarget, sidecarBytes);
+      addPaths.push(sidecarRel);
+    }
+
+    await git(["add", "--", ...addPaths], this.home);
     // Allow empty-on-no-change commits so version history records the bump.
     await git(["commit", "-q", "--allow-empty", "-m", `${metadata.message} [v${version}]`], this.home);
 
-    // Mirror to live skill tree (atomic).
+    // Mirror to live skill tree (atomic) — both SKILL.md and the sidecar so
+    // Claude Code reads the clean SKILL.md while skila reads the sidecar.
     const live = liveSkillPath(name, metadata.status);
     mkdirSync(dirname(live), { recursive: true });
     atomicWriteFileSync(live, content);
+    if (sidecarBytes) {
+      atomicWriteFileSync(sidecarPathFor(live), sidecarBytes);
+    }
   }
 
   async moveSkill(name: string, fromStatus: SkillStatus, toStatus: SkillStatus): Promise<void> {
@@ -191,6 +209,32 @@ export class GitBackedStorage implements StorageAdapter {
     return out;
   }
 
+  async writeFile(name: string, relativePath: string, content: string, opts?: { message?: string }): Promise<void> {
+    if (relativePath === "SKILL.md" || relativePath.endsWith("/SKILL.md")) {
+      throw new StorageAdapterError("E_USE_WRITE_SKILL", "use writeSkill() for SKILL.md (frontmatter validation + version bump)");
+    }
+    if (relativePath.includes("..")) {
+      throw new StorageAdapterError("E_BAD_PATH", `path traversal not allowed: ${relativePath}`);
+    }
+    await this.init();
+    const status = findLiveStatus(name);
+    if (!status) throw new StorageAdapterError("E_NOT_FOUND", `git: skill ${name} not found in any live status dir`);
+
+    // Mirror to git repo path and commit
+    const repoRel = join("skills", status, name, relativePath);
+    const repoAbs = join(this.home, repoRel);
+    mkdirSync(dirname(repoAbs), { recursive: true });
+    atomicWriteFileSync(repoAbs, content);
+    await git(["add", "--", repoRel], this.home);
+    const message = opts?.message ?? `web-edit ${name}/${relativePath}`;
+    await git(["commit", "-q", "--allow-empty", "-m", message], this.home);
+
+    // Mirror to live tree (where the skill is actually loaded from)
+    const liveAbs = join(statusDir(status), name, relativePath);
+    mkdirSync(dirname(liveAbs), { recursive: true });
+    atomicWriteFileSync(liveAbs, content);
+  }
+
   async diff(name: string, from: string, to: string): Promise<string> {
     await this.init();
     // Resolve to commit SHAs by scanning version-tagged commits.
@@ -244,4 +288,4 @@ export async function isGitAvailable(): Promise<boolean> {
 }
 
 // Suppress unused lint for findLiveStatus (kept for future use by readSkill auto-status).
-void findLiveStatus;
+// (Now consumed by writeFile to locate the active status dir for supporting files.)

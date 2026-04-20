@@ -325,9 +325,10 @@ describe("AC14, AC15 — skill detail + write endpoints", () => {
       expect(r.status).toBe(200);
       const d = await r.json();
       expect(d.newVersion).toBeDefined();
-      // Verify revisionCount increased
-      const content = readFileSync(join(skills, "pub-skill", "SKILL.md"), "utf8");
-      expect(content).toContain("Rolled back to v0.1.0");
+      // Verify revisionCount increased — changelog now lives in the sidecar
+      const sidecar = JSON.parse(readFileSync(join(skills, "pub-skill", ".skila.json"), "utf8"));
+      const changes = (sidecar.changelog ?? []).map((e: any) => e.change).join("\n");
+      expect(changes).toContain("Rolled back to v0.1.0");
     } finally { cleanup(); }
   });
 

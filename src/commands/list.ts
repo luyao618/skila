@@ -8,6 +8,6 @@ export function runList(filter?: SkillStatus): { name: string; status: SkillStat
   return filtered.map((s) => ({
     name: s.name,
     status: s.status,
-    version: s.frontmatter.skila?.version ?? "?"
+    version: s.skila.version || "?"
   }));
 }
