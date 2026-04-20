@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280, initial-scale=1" />
+    <title>skila — skill inventory controller</title>
+    <link rel="stylesheet" href="./vendor/tw.css" />
+    <style>
+      :root {
+        --cm-bg: #0d1117;
+        --cm-text: #e6edf3;
+        --cm-border: #30363d;
+        --cm-gutter: #161b22;
+        --cm-selection: #264f78;
+        --cm-cursor: #58a6ff;
+        --cm-line-active: #161b22;
+      }
+      .cm-editor { height: 100%; font-size: 13px; }
+      .cm-editor.cm-focused { outline: none; }
+      .cm-scroller { overflow: auto; height: 100%; }
+      .cm-editor .cm-content { padding: 12px 4px; font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace; }
+      .cm-editor .cm-line { line-height: 1.6; }
+      .cm-editor .cm-gutters { background: var(--cm-gutter); border-right: 1px solid var(--cm-border); color: #484f58; }
+      .cm-editor .cm-activeLineGutter { background: var(--cm-line-active); }
+      .cm-editor .cm-activeLine { background: var(--cm-line-active); }
+      .cm-editor .cm-cursor { border-left-color: var(--cm-cursor); }
+      .cm-editor .cm-selectionBackground { background: var(--cm-selection) !important; }
+      /* Scrollbar */
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: #0d1117; }
+      ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+      /* Focus rings */
+      :focus-visible { outline: 2px solid #388bfd; outline-offset: 1px; }
+      /* Staging ring */
+      .staging-ring { box-shadow: 0 0 0 2px #f0b429; }
+      /* Sparkline */
+      .sparkline { display: inline-block; vertical-align: middle; }
+    </style>
+  </head>
+  <body class="bg-[#0d1117] text-[#e6edf3] font-sans h-screen overflow-hidden antialiased">
+    <div id="app" class="h-full flex flex-col">
+
+      <!-- ─── Top bar ─────────────────────────────────────────────────────── -->
+      <header role="banner" class="flex items-center justify-between px-4 py-2 border-b border-[#30363d] bg-[#161b22] shrink-0">
+        <div class="flex items-center gap-4">
+          <span class="font-semibold tracking-tight text-[#e6edf3] text-sm">skila</span>
+          <nav aria-label="Main" class="flex gap-1 text-xs">
+            <button id="tab-dashboard" class="tab-btn px-3 py-1.5 rounded font-medium" data-tab="dashboard">Dashboard</button>
+            <button id="tab-skills"    class="tab-btn px-3 py-1.5 rounded font-medium" data-tab="skills">Skills</button>
+            <button id="tab-settings"  class="tab-btn px-3 py-1.5 rounded font-medium" data-tab="settings">Settings</button>
+          </nav>
+        </div>
+        <div id="status-badges" class="flex items-center gap-2 text-xs text-[#8b949e]" aria-live="polite">
+          <span class="text-[#3fb950]" id="badge-published">🟢 — published</span>
+          <span class="text-[#d29922]" id="badge-draft">🟡 — drafts</span>
+          <span class="text-[#f0b429]" id="badge-staging">🟠 — staging</span>
+          <span class="text-[#8b949e]" id="badge-archived">⚫ — archived</span>
+        </div>
+      </header>
+
+      <!-- ─── Dashboard pane ─────────────────────────────────────────────── -->
+      <div id="pane-dashboard" class="pane flex-1 p-6 overflow-y-auto hidden">
+        <h1 class="text-base font-semibold mb-4 text-[#e6edf3]">Dashboard</h1>
+        <div id="dashboard-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"></div>
+        <div id="staging-backlog" class="mb-6 hidden">
+          <h2 class="text-xs uppercase tracking-wider text-[#8b949e] mb-2">Staging Candidates</h2>
+          <ul id="staging-backlog-list" class="space-y-1 text-sm"></ul>
+        </div>
+        <div id="low-success" class="hidden">
+          <h2 class="text-xs uppercase tracking-wider text-[#8b949e] mb-2">Low Success Rate (&lt;50%)</h2>
+          <ul id="low-success-list" class="space-y-1 text-sm text-[#f85149]"></ul>
+        </div>
+      </div>
+
+      <!-- ─── Skills pane (three-column) ────────────────────────────────── -->
+      <div id="pane-skills" class="pane flex-1 grid grid-cols-[260px_minmax(0,1fr)_320px] min-h-0 hidden">
+
+        <!-- LEFT: Filter + Search + Skill list -->
+        <aside aria-label="Skill list" class="border-r border-[#30363d] flex flex-col min-h-0 bg-[#161b22]">
+          <!-- Filter -->
+          <section class="p-3 border-b border-[#30363d]" aria-labelledby="filter-heading">
+            <h2 id="filter-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Filter</h2>
+            <ul class="space-y-0.5 text-xs" role="group" aria-label="Status filters">
+              <li><label class="flex items-center gap-2 cursor-pointer text-[#e6edf3] hover:text-white py-0.5">
+                <input type="checkbox" class="filter-cb accent-[#388bfd]" data-status="published" checked />
+                <span class="flex-1">published</span><span id="fc-published" class="text-[#8b949e]">0</span>
+              </label></li>
+              <li><label class="flex items-center gap-2 cursor-pointer text-[#e6edf3] hover:text-white py-0.5">
+                <input type="checkbox" class="filter-cb accent-[#388bfd]" data-status="staging" checked />
+                <span class="flex-1">staging</span><span id="fc-staging" class="text-[#8b949e]">0</span>
+              </label></li>
+              <li><label class="flex items-center gap-2 cursor-pointer text-[#e6edf3] hover:text-white py-0.5">
+                <input type="checkbox" class="filter-cb accent-[#388bfd]" data-status="draft" checked />
+                <span class="flex-1">draft</span><span id="fc-draft" class="text-[#8b949e]">0</span>
+              </label></li>
+              <li><label class="flex items-center gap-2 cursor-pointer text-[#e6edf3] hover:text-white py-0.5">
+                <input type="checkbox" class="filter-cb accent-[#388bfd]" data-status="archived" />
+                <span class="flex-1">archived</span><span id="fc-archived" class="text-[#8b949e]">0</span>
+              </label></li>
+              <li><label class="flex items-center gap-2 cursor-pointer text-[#e6edf3] hover:text-white py-0.5">
+                <input type="checkbox" class="filter-cb accent-[#388bfd]" data-status="disabled" />
+                <span class="flex-1">disabled</span><span id="fc-disabled" class="text-[#8b949e]">0</span>
+              </label></li>
+            </ul>
+          </section>
+          <!-- Search -->
+          <section class="p-3 border-b border-[#30363d]" aria-labelledby="search-heading">
+            <h2 id="search-heading" class="sr-only">Search skills</h2>
+            <input id="skill-search" type="search" placeholder="filter by name…" aria-label="Search skills"
+              class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] placeholder-[#8b949e] focus:outline-none focus:border-[#388bfd]" />
+          </section>
+          <!-- Skills list -->
+          <section class="p-2 flex-1 overflow-y-auto" aria-labelledby="skills-list-heading">
+            <h2 id="skills-list-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 px-1 font-medium">Skills</h2>
+            <ul id="skill-list" role="listbox" aria-label="Skills" class="space-y-0.5 text-xs"></ul>
+          </section>
+        </aside>
+
+        <!-- CENTER: Editor -->
+        <main class="flex flex-col min-h-0 bg-[#0d1117]" aria-label="Skill editor">
+          <!-- Hallucination warning banner -->
+          <div id="hallucination-banner" class="hidden bg-[#2d1d0e] border-b border-[#f0b429] px-4 py-2 text-xs text-[#f0b429] flex items-center gap-2" role="alert">
+            <span>⚠</span>
+            <span id="hallucination-msg"></span>
+          </div>
+          <!-- Skill header -->
+          <div class="px-4 py-2 border-b border-[#30363d] flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+              <h1 id="active-skill-name" class="font-semibold text-sm text-[#e6edf3] truncate">No skill selected</h1>
+              <span id="active-skill-version" class="text-[10px] text-[#8b949e] font-mono shrink-0"></span>
+            </div>
+            <div class="flex gap-1">
+              <button id="editor-tab-skill" class="editor-tab px-2 py-1 text-xs rounded" data-etab="skill">Edit SKILL.md</button>
+              <button id="editor-tab-scripts" class="editor-tab px-2 py-1 text-xs rounded" data-etab="scripts">Scripts</button>
+              <button id="editor-tab-refs" class="editor-tab px-2 py-1 text-xs rounded" data-etab="refs">References</button>
+              <button id="editor-tab-assets" class="editor-tab px-2 py-1 text-xs rounded" data-etab="assets">Assets</button>
+            </div>
+          </div>
+          <!-- Description -->
+          <div id="active-skill-desc" class="px-4 py-1.5 text-xs text-[#8b949e] border-b border-[#30363d] shrink-0 hidden"></div>
+          <!-- Editor container -->
+          <div id="editor" class="flex-1 min-h-0 overflow-hidden" aria-label="CodeMirror editor"></div>
+          <!-- File list (for scripts/refs/assets tabs) -->
+          <div id="file-list-view" class="flex-1 min-h-0 overflow-y-auto p-4 hidden">
+            <ul id="file-list" class="space-y-1 text-xs font-mono"></ul>
+          </div>
+          <!-- Save bar -->
+          <div class="px-4 py-2 border-t border-[#30363d] flex items-center justify-between text-xs shrink-0 bg-[#161b22]">
+            <div class="flex gap-2">
+              <button id="btn-save" class="px-3 py-1.5 rounded bg-[#238636] hover:bg-[#2ea043] text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed" disabled title="Save (Cmd+S)">Save</button>
+              <button id="btn-discard" class="px-3 py-1.5 rounded border border-[#30363d] hover:border-[#58a6ff] text-[#8b949e] hover:text-[#e6edf3] disabled:opacity-40 disabled:cursor-not-allowed" disabled>Discard</button>
+            </div>
+            <span id="mtime-indicator" class="text-[#8b949e]"></span>
+          </div>
+        </main>
+
+        <!-- RIGHT: Inspector -->
+        <aside aria-label="Skill inspector" class="border-l border-[#30363d] flex flex-col min-h-0 overflow-y-auto bg-[#161b22]">
+
+          <!-- VERSIONS -->
+          <section class="p-3 border-b border-[#30363d]" aria-labelledby="versions-heading">
+            <h2 id="versions-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Versions</h2>
+            <ul id="versions-list" class="space-y-1 text-xs text-[#8b949e]">
+              <li class="italic text-[#484f58]">no skill selected</li>
+            </ul>
+          </section>
+
+          <!-- FEEDBACK -->
+          <section class="p-3 border-b border-[#30363d]" aria-labelledby="feedback-heading">
+            <h2 id="feedback-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Feedback</h2>
+            <div id="feedback-sparkline-wrap" class="mb-2 hidden">
+              <svg id="feedback-sparkline" class="sparkline" width="80" height="20" aria-label="Success rate sparkline"></svg>
+            </div>
+            <dl class="space-y-0.5 text-xs">
+              <div class="flex justify-between"><dt class="text-[#8b949e]">Success rate</dt><dd id="fb-rate" class="font-mono text-[#3fb950]">—</dd></div>
+              <div class="flex justify-between"><dt class="text-[#8b949e]">Usage count</dt><dd id="fb-count" class="font-mono text-[#e6edf3]">—</dd></div>
+              <div class="flex justify-between"><dt class="text-[#8b949e]">Last used</dt><dd id="fb-last" class="font-mono text-[#e6edf3]">—</dd></div>
+            </dl>
+          </section>
+
+          <!-- ACTIONS -->
+          <section class="p-3 border-b border-[#30363d]" aria-labelledby="actions-heading">
+            <h2 id="actions-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Actions</h2>
+            <div id="actions-panel" class="space-y-1.5 text-xs">
+              <!-- Staging-specific prominent actions (shown when status=staging) -->
+              <div id="staging-actions" class="hidden space-y-1.5">
+                <button id="btn-graduate" class="w-full px-3 py-2 rounded bg-[#b08800] hover:bg-[#d4a017] text-white font-semibold text-xs" data-action="graduate">✓ Graduate to Published</button>
+                <button id="btn-reject"   class="w-full px-3 py-2 rounded bg-[#b91c1c] hover:bg-[#dc2626] text-white font-semibold text-xs" data-action="reject">✗ Reject to Archive</button>
+              </div>
+              <!-- Standard actions -->
+              <button id="btn-promote"    class="action-btn w-full px-3 py-1.5 rounded border border-[#30363d] hover:border-[#388bfd] text-[#e6edf3] text-left hidden" data-action="promote">Promote draft → published</button>
+              <button id="btn-rollback"   class="action-btn w-full px-3 py-1.5 rounded border border-[#30363d] hover:border-[#8b949e] text-[#e6edf3] text-left hidden" data-action="rollback">Rollback to v0.X…</button>
+              <button id="btn-disable"    class="action-btn w-full px-3 py-1.5 rounded border border-[#30363d] hover:border-[#f85149] text-[#e6edf3] text-left hidden" data-action="disable">Disable</button>
+              <button id="btn-archive"    class="action-btn w-full px-3 py-1.5 rounded border border-[#30363d] hover:border-[#8b949e] text-[#e6edf3] text-left hidden" data-action="archive">Archive</button>
+              <button id="btn-reactivate" class="action-btn w-full px-3 py-1.5 rounded border border-[#30363d] hover:border-[#3fb950] text-[#e6edf3] text-left hidden" data-action="reactivate">Reactivate</button>
+              <p id="no-actions" class="text-[#484f58] italic">No skill selected</p>
+            </div>
+          </section>
+
+          <!-- DETAILS -->
+          <section class="p-3" aria-labelledby="details-heading">
+            <h2 id="details-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Details</h2>
+            <dl id="details-panel" class="space-y-0.5 text-xs">
+              <div class="flex justify-between"><dt class="text-[#8b949e]">status</dt><dd id="det-status" class="font-mono">—</dd></div>
+              <div class="flex justify-between"><dt class="text-[#8b949e]">source</dt><dd id="det-source" class="font-mono text-[#8b949e]">—</dd></div>
+              <div class="flex justify-between"><dt class="text-[#8b949e]">parentVersion</dt><dd id="det-parent" class="font-mono text-[#8b949e]">—</dd></div>
+              <div class="flex justify-between"><dt class="text-[#8b949e]">revisionCount</dt><dd id="det-revisions" class="font-mono text-[#e6edf3]">—</dd></div>
+            </dl>
+          </section>
+        </aside>
+      </div>
+
+      <!-- ─── Settings pane ──────────────────────────────────────────────── -->
+      <div id="pane-settings" class="pane flex-1 p-6 overflow-y-auto hidden">
+        <h1 class="text-base font-semibold mb-4 text-[#e6edf3]">Settings</h1>
+        <p class="text-sm text-[#8b949e]">Configuration lives in <code class="font-mono text-xs bg-[#161b22] px-1 py-0.5 rounded">~/.claude/skila-data/config.json</code>.</p>
+        <div class="mt-4 space-y-3 text-sm">
+          <div class="flex items-center gap-3">
+            <span class="text-[#8b949e] w-48">Port</span>
+            <span id="cfg-port" class="font-mono text-[#e6edf3]">7777</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-[#8b949e] w-48">Promotion floor invocations</span>
+            <span id="cfg-floor" class="font-mono text-[#e6edf3]">10</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- #app -->
+
+    <script type="module">
+      import { EditorState, Compartment, EditorView, keymap, lineNumbers, highlightActiveLine, markdown } from "./vendor/cm.js";
+
+      // ── State ─────────────────────────────────────────────────────────────
+      let skills = [];
+      let selectedName = null;
+      let selectedSkill = null;
+      let cmView = null;
+      let originalDoc = "";
+      let dirty = false;
+      let currentMtime = null;
+      let serverToken = getCookie("skila_token") ?? "";
+      let activeTab = "skills";
+      let activeEditorTab = "skill";
+      let versions = [];
+      let feedback = null;
+
+      // ── Helpers ───────────────────────────────────────────────────────────
+      function getCookie(name) {
+        return document.cookie.split(";").map(c => c.trim()).find(c => c.startsWith(name + "="))?.split("=")[1];
+      }
+
+      function api(path, opts = {}) {
+        const headers = { "Content-Type": "application/json", "x-skila-token": serverToken, ...(opts.headers ?? {}) };
+        return fetch(path, { ...opts, headers });
+      }
+
+      function statusBadge(status) {
+        const map = { published: { cls: "text-[#3fb950] bg-[#0d2416]", label: "pub" },
+                      staging:   { cls: "text-[#f0b429] bg-[#2d1d0e]", label: "stg" },
+                      draft:     { cls: "text-[#d29922] bg-[#1c1700]", label: "dft" },
+                      archived:  { cls: "text-[#8b949e] bg-[#161b22]", label: "arc" },
+                      disabled:  { cls: "text-[#484f58] bg-[#161b22]", label: "dis" } };
+        const { cls, label } = map[status] ?? { cls: "text-[#8b949e]", label: status };
+        return `<span class="inline-block px-1 py-0.5 rounded text-[9px] font-mono font-medium ${cls}">${label}</span>`;
+      }
+
+      function relativeTime(iso) {
+        if (!iso) return "—";
+        const diff = Date.now() - new Date(iso).getTime();
+        const s = Math.floor(diff / 1000);
+        if (s < 60) return `${s}s ago`;
+        const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+        const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+        return `${Math.floor(h / 24)}d ago`;
+      }
+
+      // ── Tab switching ─────────────────────────────────────────────────────
+      function switchMainTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll(".pane").forEach(p => p.classList.add("hidden"));
+        document.getElementById(`pane-${tab}`).classList.remove("hidden");
+        document.querySelectorAll(".tab-btn").forEach(b => {
+          const active = b.dataset.tab === tab;
+          b.className = `tab-btn px-3 py-1.5 rounded font-medium text-xs ${active ? "bg-[#21262d] text-[#e6edf3]" : "text-[#8b949e] hover:text-[#e6edf3]"}`;
+        });
+        if (tab === "dashboard") loadDashboard();
+      }
+
+      document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => switchMainTab(b.dataset.tab)));
+
+      // Editor tabs
+      document.querySelectorAll(".editor-tab").forEach(b => b.addEventListener("click", () => switchEditorTab(b.dataset.etab)));
+
+      function switchEditorTab(etab) {
+        activeEditorTab = etab;
+        document.querySelectorAll(".editor-tab").forEach(b => {
+          const active = b.dataset.etab === etab;
+          b.className = `editor-tab px-2 py-1 text-xs rounded ${active ? "bg-[#21262d] text-[#e6edf3]" : "text-[#8b949e] hover:text-[#e6edf3]"}`;
+        });
+        const editorEl = document.getElementById("editor");
+        const fileListEl = document.getElementById("file-list-view");
+        if (etab === "skill") {
+          editorEl.classList.remove("hidden");
+          fileListEl.classList.add("hidden");
+          if (selectedSkill) loadEditorContent(selectedSkill);
+        } else {
+          editorEl.classList.add("hidden");
+          fileListEl.classList.remove("hidden");
+          renderFileList(etab);
+        }
+      }
+
+      function renderFileList(etab) {
+        if (!selectedSkill) return;
+        const files = etab === "scripts" ? (selectedSkill.scripts ?? []) :
+                      etab === "refs"    ? (selectedSkill.references ?? []) :
+                                           (selectedSkill.assets ?? []);
+        const ul = document.getElementById("file-list");
+        if (files.length === 0) {
+          ul.innerHTML = `<li class="text-[#484f58] italic">No ${etab} files</li>`;
+        } else {
+          ul.innerHTML = files.map(f =>
+            `<li><button class="text-[#58a6ff] hover:underline text-left" onclick="loadFile('${encodeURIComponent(f)}')">${f}</button></li>`
+          ).join("");
+        }
+      }
+
+      window.loadFile = async function(encodedPath) {
+        if (!selectedName) return;
+        const path = decodeURIComponent(encodedPath);
+        const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/file?path=${encodeURIComponent(path)}`);
+        if (!r.ok) return;
+        const d = await r.json();
+        document.getElementById("file-list-view").classList.add("hidden");
+        document.getElementById("editor").classList.remove("hidden");
+        loadContentIntoEditor(d.content, false);
+      };
+
+      // ── CodeMirror setup ─────────────────────────────────────────────────
+      function initEditor(content, editable = true) {
+        const host = document.getElementById("editor");
+        if (cmView) { cmView.destroy(); cmView = null; }
+
+        const readOnlyComp = new Compartment();
+        const state = EditorState.create({
+          doc: content,
+          extensions: [
+            lineNumbers(),
+            highlightActiveLine(),
+            markdown(),
+            readOnlyComp.of(EditorView.editable.of(editable)),
+            EditorView.theme({
+              "&": { backgroundColor: "var(--cm-bg)", color: "var(--cm-text)", height: "100%" },
+              ".cm-scroller": { fontFamily: "inherit" },
+            }),
+            EditorView.updateListener.of(update => {
+              if (update.docChanged && editable) {
+                dirty = update.state.doc.toString() !== originalDoc;
+                document.getElementById("btn-save").disabled = !dirty;
+                document.getElementById("btn-discard").disabled = !dirty;
+              }
+            }),
+            keymap.of([{ key: "Mod-s", run: () => { doSave(); return true; } }]),
+          ]
+        });
+        cmView = new EditorView({ state, parent: host });
+        return cmView;
+      }
+
+      function loadContentIntoEditor(content, track = true) {
+        if (track) originalDoc = content;
+        dirty = false;
+        initEditor(content, track);
+        document.getElementById("btn-save").disabled = true;
+        document.getElementById("btn-discard").disabled = true;
+      }
+
+      function loadEditorContent(skill) {
+        const content = skill.body ?? skill.rawContent ?? "";
+        loadContentIntoEditor(content, true);
+        const mi = document.getElementById("mtime-indicator");
+        if (skill.mtime) mi.textContent = `saved ${relativeTime(skill.mtime)}`;
+      }
+
+      // ── Skill list rendering ──────────────────────────────────────────────
+      function getActiveFilters() {
+        return new Set([...document.querySelectorAll(".filter-cb:checked")].map(c => c.dataset.status));
+      }
+
+      function getSearchQuery() {
+        return document.getElementById("skill-search").value.trim().toLowerCase();
+      }
+
+      function renderSkillList() {
+        const filters = getActiveFilters();
+        const q = getSearchQuery();
+        const filtered = skills.filter(s => filters.has(s.status) && (!q || s.name.includes(q) || s.description?.toLowerCase().includes(q)));
+
+        // Update filter counts
+        const counts = { published: 0, staging: 0, draft: 0, archived: 0, disabled: 0 };
+        skills.forEach(s => { counts[s.status] = (counts[s.status] ?? 0) + 1; });
+        Object.entries(counts).forEach(([st, n]) => {
+          const el = document.getElementById(`fc-${st}`);
+          if (el) el.textContent = n;
+        });
+
+        // Top-bar badges
+        document.getElementById("badge-published").textContent = `🟢 ${counts.published} published`;
+        document.getElementById("badge-draft").textContent = `🟡 ${counts.draft} drafts`;
+        document.getElementById("badge-staging").textContent = `🟠 ${counts.staging} staging`;
+        document.getElementById("badge-archived").textContent = `⚫ ${counts.archived} archived`;
+
+        const ul = document.getElementById("skill-list");
+        if (filtered.length === 0) {
+          ul.innerHTML = `<li class="text-[#484f58] italic px-1 py-2">no skills match</li>`;
+          return;
+        }
+        // Group by status
+        const order = ["staging", "published", "draft", "archived", "disabled"];
+        const grouped = {};
+        for (const s of filtered) { (grouped[s.status] ??= []).push(s); }
+        let html = "";
+        for (const st of order) {
+          if (!grouped[st]) continue;
+          for (const s of grouped[st]) {
+            const isSel = s.name === selectedName;
+            const stagingRing = s.status === "staging" ? " ring-1 ring-[#f0b429]" : "";
+            html += `<li role="option" aria-selected="${isSel}" data-name="${s.name}"
+              class="flex items-center justify-between px-2 py-1.5 rounded cursor-pointer text-xs gap-1
+              ${isSel ? "bg-[#21262d] text-[#e6edf3]" : "text-[#8b949e] hover:bg-[#1c2128] hover:text-[#e6edf3]"}${stagingRing}">
+              <span class="truncate flex-1" title="${s.name}">${s.name}</span>
+              ${statusBadge(s.status)}
+            </li>`;
+          }
+        }
+        ul.innerHTML = html;
+        ul.querySelectorAll("li[data-name]").forEach(li => {
+          li.addEventListener("click", () => selectSkill(li.dataset.name));
+          li.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") selectSkill(li.dataset.name); });
+          li.setAttribute("tabindex", "0");
+        });
+      }
+
+      // ── Select skill ─────────────────────────────────────────────────────
+      async function selectSkill(name) {
+        selectedName = name;
+        renderSkillList();
+        const r = await api(`/api/skills/${encodeURIComponent(name)}`);
+        if (!r.ok) return;
+        selectedSkill = await r.json();
+        currentMtime = selectedSkill.mtime;
+        document.getElementById("active-skill-name").textContent = name;
+        document.getElementById("active-skill-version").textContent = `v${selectedSkill.version}`;
+        const descEl = document.getElementById("active-skill-desc");
+        if (selectedSkill.description) {
+          descEl.textContent = selectedSkill.description;
+          descEl.classList.remove("hidden");
+        } else descEl.classList.add("hidden");
+
+        // Staging ring on center pane header
+        const nameEl = document.getElementById("active-skill-name");
+        nameEl.classList.toggle("text-[#f0b429]", selectedSkill.status === "staging");
+
+        // Hallucination banner
+        const warnings = selectedSkill.warnings ?? [];
+        const hallucination = warnings.find(w => w.type === "judge_hallucination");
+        const banner = document.getElementById("hallucination-banner");
+        if (hallucination) {
+          document.getElementById("hallucination-msg").textContent = `judge proposed UPDATE→${hallucination.proposed} but ${hallucination.proposed} not found`;
+          banner.classList.remove("hidden");
+        } else banner.classList.add("hidden");
+
+        // Editor tab
+        switchEditorTab("skill");
+        loadEditorContent(selectedSkill);
+
+        // Load versions and feedback in parallel
+        loadVersions(name);
+        loadFeedback(name);
+        renderActions(selectedSkill);
+        renderDetails(selectedSkill);
+      }
+
+      async function loadVersions(name) {
+        const r = await api(`/api/skills/${encodeURIComponent(name)}/versions`);
+        versions = r.ok ? await r.json() : [];
+        const ul = document.getElementById("versions-list");
+        if (versions.length === 0) {
+          ul.innerHTML = `<li class="text-[#484f58] italic">no versions recorded</li>`;
+          return;
+        }
+        ul.innerHTML = versions.map((v, i) => {
+          const isCurrent = i === 0;
+          return `<li class="flex items-center gap-1.5 py-0.5">
+            <span class="text-[8px] ${isCurrent ? "text-[#388bfd]" : "text-[#30363d]"}">▸</span>
+            <button class="font-mono text-xs ${isCurrent ? "text-[#388bfd] font-medium" : "text-[#8b949e] hover:text-[#e6edf3]"}"
+              onclick="viewVersion('${encodeURIComponent(v.version)}')">${v.version}${isCurrent ? " (current)" : ""}</button>
+            <span class="text-[#484f58] text-[10px] ml-auto">${relativeTime(v.date)}</span>
+          </li>`;
+        }).join("");
+      }
+
+      window.viewVersion = async function(encodedVersion) {
+        if (!selectedName) return;
+        const version = decodeURIComponent(encodedVersion);
+        const r = await fetch(`/api/skills/${encodeURIComponent(selectedName)}/diff?from=${encodeURIComponent(versions[versions.length - 1]?.version ?? version)}&to=${encodeURIComponent(version)}`);
+        if (!r.ok) return;
+        const d = await r.json();
+        loadContentIntoEditor(d.diff ?? "(no diff)", false);
+        document.getElementById("editor").classList.remove("hidden");
+        document.getElementById("file-list-view").classList.add("hidden");
+      };
+
+      async function loadFeedback(name) {
+        const r = await api(`/api/skills/${encodeURIComponent(name)}/feedback`);
+        feedback = r.ok ? await r.json() : null;
+        const rate = document.getElementById("fb-rate");
+        const count = document.getElementById("fb-count");
+        const last = document.getElementById("fb-last");
+        const sparkWrap = document.getElementById("feedback-sparkline-wrap");
+        if (feedback && feedback.usageCount > 0) {
+          rate.textContent = `${Math.round(feedback.successRate * 100)}%`;
+          rate.className = `font-mono ${feedback.successRate >= 0.7 ? "text-[#3fb950]" : feedback.successRate >= 0.4 ? "text-[#d29922]" : "text-[#f85149]"}`;
+          count.textContent = feedback.usageCount;
+          last.textContent = relativeTime(feedback.lastUsedAt);
+          // Render sparkline from last N invocations
+          const invocations = (feedback.invocations ?? []).slice(-20);
+          renderSparkline(invocations);
+          sparkWrap.classList.remove("hidden");
+        } else {
+          rate.textContent = "—"; count.textContent = "—"; last.textContent = "—";
+          sparkWrap.classList.add("hidden");
+        }
+      }
+
+      function renderSparkline(invocations) {
+        const svg = document.getElementById("feedback-sparkline");
+        if (invocations.length === 0) { svg.innerHTML = ""; return; }
+        const w = 80, h = 20, n = invocations.length;
+        const step = w / Math.max(n, 1);
+        const bars = invocations.map((inv, i) => {
+          const color = inv.outcome === "success" ? "#3fb950" : inv.outcome === "failure" ? "#f85149" : "#8b949e";
+          const bw = Math.max(step - 1, 2);
+          const bh = inv.outcome === "success" ? h : inv.outcome === "failure" ? h / 2 : h / 3;
+          return `<rect x="${i * step}" y="${h - bh}" width="${bw}" height="${bh}" fill="${color}" rx="1"/>`;
+        }).join("");
+        svg.innerHTML = bars;
+        svg.setAttribute("title", `${invocations.filter(i => i.outcome === "success").length}/${n} successes`);
+      }
+
+      function renderActions(skill) {
+        const actions = { promote: false, graduate: false, reject: false, rollback: false, disable: false, archive: false, reactivate: false };
+        if (skill.status === "draft")     { actions.promote = true; actions.rollback = false; actions.disable = true; actions.archive = true; }
+        if (skill.status === "staging")   { actions.graduate = true; actions.reject = true; actions.disable = true; }
+        if (skill.status === "published") { actions.rollback = true; actions.disable = true; actions.archive = true; }
+        if (skill.status === "archived")  { actions.reactivate = true; }
+        if (skill.status === "disabled")  { actions.reactivate = true; }
+
+        document.getElementById("staging-actions").classList.toggle("hidden", skill.status !== "staging");
+        document.getElementById("btn-promote").classList.toggle("hidden", !actions.promote);
+        document.getElementById("btn-rollback").classList.toggle("hidden", !actions.rollback);
+        document.getElementById("btn-disable").classList.toggle("hidden", !actions.disable);
+        document.getElementById("btn-archive").classList.toggle("hidden", !actions.archive);
+        document.getElementById("btn-reactivate").classList.toggle("hidden", !actions.reactivate);
+        document.getElementById("no-actions").classList.toggle("hidden", Object.values(actions).some(Boolean) || skill.status === "staging");
+      }
+
+      function renderDetails(skill) {
+        const statusColors = { published: "text-[#3fb950]", staging: "text-[#f0b429]", draft: "text-[#d29922]", archived: "text-[#8b949e]", disabled: "text-[#484f58]" };
+        const el = document.getElementById("det-status");
+        el.textContent = skill.status;
+        el.className = `font-mono ${statusColors[skill.status] ?? ""}`;
+        document.getElementById("det-source").textContent = skill.source ?? "—";
+        document.getElementById("det-parent").textContent = skill.parentVersion ?? "—";
+        document.getElementById("det-revisions").textContent = skill.revisionCount ?? 0;
+      }
+
+      // ── Save / Discard ───────────────────────────────────────────────────
+      async function doSave() {
+        if (!selectedName || !cmView) return;
+        const content = cmView.state.doc.toString();
+        const r = await api(`/api/skills/${encodeURIComponent(selectedName)}`, {
+          method: "PUT",
+          body: JSON.stringify({ content, mtime: currentMtime }),
+        });
+        const d = await r.json();
+        if (!r.ok) { alert(`Save failed: ${d.error ?? JSON.stringify(d)}`); return; }
+        originalDoc = content;
+        dirty = false;
+        currentMtime = d.mtime;
+        document.getElementById("btn-save").disabled = true;
+        document.getElementById("btn-discard").disabled = true;
+        document.getElementById("mtime-indicator").textContent = `saved just now`;
+        // Re-fetch skill to update version / details
+        await selectSkill(selectedName);
+      }
+
+      function doDiscard() {
+        if (!selectedSkill) return;
+        loadEditorContent(selectedSkill);
+      }
+
+      document.getElementById("btn-save").addEventListener("click", doSave);
+      document.getElementById("btn-discard").addEventListener("click", doDiscard);
+
+      // Cmd/Ctrl+S global
+      document.addEventListener("keydown", e => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); doSave(); }
+      });
+
+      // ── Lifecycle actions ────────────────────────────────────────────────
+      document.getElementById("actions-panel").addEventListener("click", async (e) => {
+        const btn = e.target.closest("[data-action]");
+        if (!btn || !selectedName) return;
+        const action = btn.dataset.action;
+        if (action === "rollback") {
+          const ver = prompt("Rollback to version (e.g. 0.1.0):");
+          if (!ver) return;
+          const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/rollback?to=${encodeURIComponent(ver)}`, { method: "POST" });
+          const d = await r.json();
+          if (!r.ok) { alert(`Rollback failed: ${d.error}`); return; }
+          alert(`Rolled back to v${ver} — new version: v${d.newVersion}`);
+          await loadSkills(); await selectSkill(selectedName);
+          return;
+        }
+        const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/${action}`, { method: "POST" });
+        const d = await r.json();
+        if (!r.ok) { alert(`${action} failed: ${d.error}`); return; }
+        await loadSkills();
+        if (action === "reject") selectedName = null; // skill moved away
+        else await selectSkill(selectedName);
+      });
+
+      // ── Load all skills ──────────────────────────────────────────────────
+      async function loadSkills() {
+        const r = await fetch("/api/skills");
+        if (!r.ok) return;
+        skills = await r.json();
+        renderSkillList();
+      }
+
+      // ── Dashboard ────────────────────────────────────────────────────────
+      async function loadDashboard() {
+        const r = await fetch("/api/dashboard");
+        if (!r.ok) return;
+        const d = await r.json();
+        const grid = document.getElementById("dashboard-grid");
+        const cards = [
+          { label: "Published", value: d.counts.published, color: "text-[#3fb950]" },
+          { label: "Staging",   value: d.counts.staging,   color: "text-[#f0b429]" },
+          { label: "Draft",     value: d.counts.draft,     color: "text-[#d29922]" },
+          { label: "Total",     value: d.totalSkills,      color: "text-[#e6edf3]" },
+        ];
+        grid.innerHTML = cards.map(c => `
+          <div class="bg-[#161b22] border border-[#30363d] rounded p-4">
+            <div class="text-2xl font-bold font-mono ${c.color}">${c.value}</div>
+            <div class="text-xs text-[#8b949e] mt-1">${c.label}</div>
+          </div>`).join("");
+
+        const stagingBacklog = document.getElementById("staging-backlog");
+        if (d.stagingBacklog?.length > 0) {
+          stagingBacklog.classList.remove("hidden");
+          document.getElementById("staging-backlog-list").innerHTML = d.stagingBacklog.map(n =>
+            `<li><button class="text-[#f0b429] hover:underline text-xs" onclick="switchToSkill('${n}')">${n}</button></li>`
+          ).join("");
+        }
+        const lowSuccess = document.getElementById("low-success");
+        if (d.lowSuccess?.length > 0) {
+          lowSuccess.classList.remove("hidden");
+          document.getElementById("low-success-list").innerHTML = d.lowSuccess.map(n =>
+            `<li class="text-xs">${n}</li>`).join("");
+        }
+      }
+
+      window.switchToSkill = async function(name) {
+        switchMainTab("skills");
+        await selectSkill(name);
+      };
+
+      // ── Filter / search listeners ────────────────────────────────────────
+      document.querySelectorAll(".filter-cb").forEach(cb => cb.addEventListener("change", renderSkillList));
+      document.getElementById("skill-search").addEventListener("input", renderSkillList);
+
+      // ── Keyboard: Tab between panes ──────────────────────────────────────
+      document.addEventListener("keydown", e => {
+        if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          // Allow natural tab inside editor
+        }
+      });
+
+      // ── Init ─────────────────────────────────────────────────────────────
+      switchMainTab("skills");
+      loadSkills();
+
+      // Refresh every 30s
+      setInterval(loadSkills, 30_000);
+    </script>
+  </body>
+</html>

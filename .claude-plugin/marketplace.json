@@ -1,0 +1,14 @@
+{
+  "name": "skila-marketplace",
+  "owner": { "name": "luyao618" },
+  "plugins": [
+    {
+      "name": "skila",
+      "source": {
+        "source": "github",
+        "repo": "luyao618/skila"
+      },
+      "description": "Self-improving skill inventory controller for Claude Code: distill sessions into versioned skills with feedback-driven evolution and a web control panel"
+    }
+  ]
+}

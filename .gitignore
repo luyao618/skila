@@ -1,7 +1,7 @@
 .DS_Store
 **/.DS_Store
 node_modules/
-dist/
+# dist/ NOT gitignored — Claude Code plugin marketplace installs from this repo
 *.log
 .omc/state/sessions/
 .omc/state/checkpoints/

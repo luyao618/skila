@@ -1,22 +1,64 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1776526276738,
+  "lastScanned": 1776663663037,
   "projectRoot": "/Users/yao/work/code/personal/skila",
   "techStack": {
-    "languages": [],
-    "frameworks": [],
-    "packageManager": null,
-    "runtime": null
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": ">=20",
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "esbuild",
+        "version": "0.24.0",
+        "category": "build"
+      },
+      {
+        "name": "playwright",
+        "version": "1.59.1",
+        "category": "testing"
+      },
+      {
+        "name": "vitest",
+        "version": "4.1.4",
+        "category": "testing"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": "Node.js 20"
   },
   "build": {
-    "buildCommand": null,
-    "testCommand": null,
+    "buildCommand": "npm run build",
+    "testCommand": "npm test",
     "lintCommand": null,
     "devCommand": null,
-    "scripts": {}
+    "scripts": {
+      "build": "tsc",
+      "postbuild": "node scripts/postbuild.mjs",
+      "test": "vitest run",
+      "test:watch": "vitest",
+      "pack:check": "npm pack --dry-run",
+      "mcp": "node dist/cli.js mcp",
+      "serve": "node dist/cli.js serve",
+      "prepublishOnly": "npm run build"
+    }
   },
   "conventions": {
-    "namingStyle": null,
+    "namingStyle": "camelCase",
     "importStyle": null,
     "testPattern": null,
     "fileOrganization": null
@@ -24,19 +66,125 @@
   "structure": {
     "isMonorepo": false,
     "workspaces": [],
-    "mainDirectories": [],
+    "mainDirectories": [
+      "docs",
+      "scripts",
+      "src",
+      "tests"
+    ],
     "gitBranches": {
       "defaultBranch": "main",
       "branchingStrategy": null
     }
   },
   "customNotes": [],
-  "directoryMap": {},
+  "directoryMap": {
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 4,
+      "lastAccessed": 1776663663028,
+      "keyFiles": [
+        "cli.js",
+        "cli.js.map",
+        "types.js",
+        "types.js.map"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 0,
+      "lastAccessed": 1776663663030,
+      "keyFiles": []
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 3,
+      "lastAccessed": 1776663663030,
+      "keyFiles": [
+        "ac18-screenshots.mjs",
+        "postbuild.mjs",
+        "run-visual-verdict.mjs"
+      ]
+    },
+    "skills": {
+      "path": "skills",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1776663663031,
+      "keyFiles": []
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 2,
+      "lastAccessed": 1776663663031,
+      "keyFiles": [
+        "cli.ts",
+        "types.ts"
+      ]
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1776663663032,
+      "keyFiles": [
+        "_helpers.ts"
+      ]
+    },
+    "dist/config": {
+      "path": "dist/config",
+      "purpose": "Configuration files",
+      "fileCount": 2,
+      "lastAccessed": 1776663663032,
+      "keyFiles": [
+        "config.js",
+        "config.js.map"
+      ]
+    },
+    "src/config": {
+      "path": "src/config",
+      "purpose": "Configuration files",
+      "fileCount": 1,
+      "lastAccessed": 1776663663033,
+      "keyFiles": [
+        "config.ts"
+      ]
+    },
+    "tests/fixtures": {
+      "path": "tests/fixtures",
+      "purpose": "Test fixtures",
+      "fileCount": 0,
+      "lastAccessed": 1776663663033,
+      "keyFiles": []
+    }
+  },
   "hotPaths": [
     {
       "path": "src/cli.ts",
-      "accessCount": 10,
-      "lastAccessed": 1776578550650,
+      "accessCount": 15,
+      "lastAccessed": 1776664565023,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 11,
+      "lastAccessed": 1776664403881,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 9,
+      "lastAccessed": 1776664563959,
+      "type": "file"
+    },
+    {
+      "path": ".claude-plugin/plugin.json",
+      "accessCount": 9,
+      "lastAccessed": 1776664941652,
       "type": "file"
     },
     {
@@ -47,44 +195,56 @@
     },
     {
       "path": "skills/skila/SKILL.md",
-      "accessCount": 6,
-      "lastAccessed": 1776530255507,
-      "type": "file"
-    },
-    {
-      "path": "README.md",
-      "accessCount": 6,
-      "lastAccessed": 1776576038257,
+      "accessCount": 7,
+      "lastAccessed": 1776579330790,
       "type": "file"
     },
     {
       "path": "src/storage/atomic.ts",
+      "accessCount": 7,
+      "lastAccessed": 1776664578201,
+      "type": "file"
+    },
+    {
+      "path": "smithery.yaml",
       "accessCount": 5,
-      "lastAccessed": 1776578162475,
+      "lastAccessed": 1776664563907,
       "type": "file"
     },
     {
-      "path": ".claude-plugin/plugin.json",
-      "accessCount": 4,
-      "lastAccessed": 1776576014694,
+      "path": "src/config/config.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776664565074,
       "type": "file"
     },
     {
-      "path": "package.json",
-      "accessCount": 4,
-      "lastAccessed": 1776576967145,
+      "path": "src/hooks/feedback.cjs",
+      "accessCount": 5,
+      "lastAccessed": 1776664573905,
       "type": "file"
     },
     {
       "path": "skills/skila/references/quality-bar.md",
-      "accessCount": 3,
-      "lastAccessed": 1776530062214,
+      "accessCount": 4,
+      "lastAccessed": 1776579331301,
       "type": "file"
     },
     {
       "path": "skills/skila/references/proposal-criteria.md",
-      "accessCount": 3,
-      "lastAccessed": 1776530062268,
+      "accessCount": 4,
+      "lastAccessed": 1776579331425,
+      "type": "file"
+    },
+    {
+      "path": "src/types.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776664564913,
+      "type": "file"
+    },
+    {
+      "path": "src/web/index.html",
+      "accessCount": 4,
+      "lastAccessed": 1776664574753,
       "type": "file"
     },
     {
@@ -94,27 +254,27 @@
       "type": "file"
     },
     {
-      "path": "src/hooks/feedback.cjs",
-      "accessCount": 3,
-      "lastAccessed": 1776576590204,
-      "type": "file"
-    },
-    {
       "path": "",
       "accessCount": 3,
       "lastAccessed": 1776577025572,
       "type": "directory"
     },
     {
-      "path": "src/config/config.ts",
+      "path": "skills/skila/references/skill-creator-schema.md",
       "accessCount": 3,
-      "lastAccessed": 1776578097122,
+      "lastAccessed": 1776579331556,
       "type": "file"
     },
     {
-      "path": "skills/skila/references/skill-creator-schema.md",
-      "accessCount": 2,
-      "lastAccessed": 1776529797602,
+      "path": "skills/skila/assets/prompts/prompt-templates.md",
+      "accessCount": 3,
+      "lastAccessed": 1776579331817,
+      "type": "file"
+    },
+    {
+      "path": "skills/skila/assets/proposal-row.tmpl",
+      "accessCount": 3,
+      "lastAccessed": 1776579331940,
       "type": "file"
     },
     {
@@ -124,21 +284,9 @@
       "type": "file"
     },
     {
-      "path": "skills/skila/assets/proposal-row.tmpl",
-      "accessCount": 2,
-      "lastAccessed": 1776530057242,
-      "type": "file"
-    },
-    {
       "path": "skills/skila/scripts/lint_skill.py",
       "accessCount": 2,
       "lastAccessed": 1776530072061,
-      "type": "file"
-    },
-    {
-      "path": "skills/skila/assets/prompts/prompt-templates.md",
-      "accessCount": 2,
-      "lastAccessed": 1776530072113,
       "type": "file"
     },
     {
@@ -160,33 +308,21 @@
       "type": "file"
     },
     {
-      "path": "src/types.ts",
-      "accessCount": 2,
-      "lastAccessed": 1776576967041,
-      "type": "file"
-    },
-    {
       "path": "tsconfig.json",
       "accessCount": 2,
       "lastAccessed": 1776576994426,
       "type": "file"
     },
     {
-      "path": "src/web/index.html",
+      "path": "skills/skila/assets/SKILL.md.tmpl",
       "accessCount": 2,
-      "lastAccessed": 1776578691719,
+      "lastAccessed": 1776579331689,
       "type": "file"
     },
     {
       "path": "skills/skila/scripts/scan_inventory.py",
       "accessCount": 1,
       "lastAccessed": 1776529595328,
-      "type": "file"
-    },
-    {
-      "path": "skills/skila/assets/SKILL.md.tmpl",
-      "accessCount": 1,
-      "lastAccessed": 1776529651466,
       "type": "file"
     },
     {
@@ -320,12 +456,6 @@
       "accessCount": 1,
       "lastAccessed": 1776530267551,
       "type": "directory"
-    },
-    {
-      "path": "smithery.yaml",
-      "accessCount": 1,
-      "lastAccessed": 1776576014826,
-      "type": "file"
     },
     {
       "path": "LICENSE",

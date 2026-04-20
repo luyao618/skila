@@ -1,7 +1,11 @@
 {
   "name": "skila",
   "description": "Self-improving skill inventory controller: /skila distills sessions into versioned skills with feedback-driven evolution and a web control panel.",
-  "version": "0.1.0",
+  "version": "0.0.1",
+  "author": {
+    "name": "luyao618"
+  },
+  "repository": "https://github.com/luyao618/skila",
   "license": "MIT",
   "keywords": [
     "skill",
