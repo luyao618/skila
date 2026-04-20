@@ -4,8 +4,8 @@
 // FIX-H13: enforce body-size cap and Content-Type check on PUT/POST.
 // FIX-C7:  files endpoint now requires token (handleGetFile signature changed).
 import { createServer } from "node:http";
-import { readFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync, existsSync, realpathSync } from "node:fs";
+import { join, resolve, relative } from "node:path";
 import { URL, fileURLToPath } from "node:url";
 import { generateToken, getTokenFromCookie, setTokenCookie, validateToken, sendJson } from "./middleware/token.js";
 // API handlers
@@ -123,6 +123,11 @@ async function route(req, res, distDir, serverToken) {
     }
     // Security headers
     res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+    res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'");
     // ── Static assets ──────────────────────────────────────────────────────────
     if (method === "GET" && path === "/") {
         const indexPath = join(distDir, "index.html");
@@ -236,15 +241,34 @@ function checkContentTypeJsonOptional(req, res) {
     return checkContentTypeJson(req, res);
 }
 function serveStatic(res, distDir, urlPath) {
-    const rel = urlPath.replace(/^\//, "").replace(/\.\./g, "");
+    const rel = urlPath.replace(/^\//, "");
     const abs = join(distDir, rel);
-    if (!existsSync(abs)) {
+    // FIX-H14: realpath containment — resolve symlinks before comparing
+    let distRoot;
+    let absResolved;
+    try {
+        distRoot = realpathSync(distDir);
+        absResolved = realpathSync(abs);
+    }
+    catch {
+        // File doesn't exist or can't be resolved
         res.writeHead(404, { "Content-Type": "text/plain" });
         res.end("not found");
         return;
     }
-    const mime = abs.endsWith(".js") ? "application/javascript" : abs.endsWith(".css") ? "text/css" : "application/octet-stream";
-    const data = readFileSync(abs);
+    const rel2 = relative(distRoot, absResolved);
+    if (rel2.startsWith("..") || rel2 === "") {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("not found");
+        return;
+    }
+    if (!existsSync(absResolved)) {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("not found");
+        return;
+    }
+    const mime = absResolved.endsWith(".js") ? "application/javascript" : absResolved.endsWith(".css") ? "text/css" : "application/octet-stream";
+    const data = readFileSync(absResolved);
     res.writeHead(200, { "Content-Type": mime, "Cache-Control": "public, max-age=3600" });
     res.end(data);
 }

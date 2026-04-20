@@ -98,6 +98,11 @@ export async function handlePutSkill(req, res, name) {
         sendJson(res, 400, { error: "body.content must be a string" });
         return;
     }
+    // FIX-H16: mtime is required for optimistic concurrency
+    if (!payload.mtime) {
+        sendJson(res, 400, { error: "mtime required" });
+        return;
+    }
     // Validate
     let fm;
     try {
@@ -107,18 +112,16 @@ export async function handlePutSkill(req, res, name) {
         sendJson(res, 422, { error: "validation failed", errors: e.errors ?? [e.message] });
         return;
     }
-    // mtime check (optimistic concurrency)
+    // mtime check (optimistic concurrency) — mtime is required (FIX-H16)
     const skill = findSkill(name);
     if (!skill) {
         sendJson(res, 404, { error: `skill not found: ${name}` });
         return;
     }
-    if (payload.mtime) {
-        const diskMtime = statSync(skill.path).mtime.toISOString();
-        if (diskMtime !== payload.mtime) {
-            sendJson(res, 409, { error: "conflict: skill was modified since last read", diskMtime });
-            return;
-        }
+    const diskMtime = statSync(skill.path).mtime.toISOString();
+    if (diskMtime !== payload.mtime) {
+        sendJson(res, 409, { error: "conflict: skill was modified since last read", diskMtime });
+        return;
     }
     // Patch source to web
     fm.skila.source = "user-edit-via-web";

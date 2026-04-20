@@ -165,8 +165,14 @@
   "hotPaths": [
     {
       "path": "src/cli.ts",
-      "accessCount": 15,
-      "lastAccessed": 1776664565023,
+      "accessCount": 23,
+      "lastAccessed": 1776671839292,
+      "type": "file"
+    },
+    {
+      "path": "src/web/index.html",
+      "accessCount": 16,
+      "lastAccessed": 1776671849272,
       "type": "file"
     },
     {
@@ -206,16 +212,16 @@
       "type": "file"
     },
     {
+      "path": "",
+      "accessCount": 9,
+      "lastAccessed": 1776670997057,
+      "type": "directory"
+    },
+    {
       "path": "docs/research/hermes-and-memex-study.md",
       "accessCount": 8,
       "lastAccessed": 1776575496097,
       "type": "directory"
-    },
-    {
-      "path": "src/web/index.html",
-      "accessCount": 8,
-      "lastAccessed": 1776666473276,
-      "type": "file"
     },
     {
       "path": "src/types.ts",
@@ -228,12 +234,6 @@
       "accessCount": 7,
       "lastAccessed": 1776579330790,
       "type": "file"
-    },
-    {
-      "path": "",
-      "accessCount": 7,
-      "lastAccessed": 1776668521038,
-      "type": "directory"
     },
     {
       "path": "smithery.yaml",

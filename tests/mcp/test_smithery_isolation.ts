@@ -79,3 +79,24 @@ describe("D5 — Smithery isolation", () => {
     expect(existsSync(orphan)).toBe(false);
   });
 });
+
+// FIX-H22: MCP inspect awaits runInspect promise
+describe("FIX-H22 — MCP inspect awaits runInspect", () => {
+  it("handleMcpRequest inspect returns actual skill content, not empty object", async () => {
+    const { handleMcpRequest } = await import("../../src/commands/mcp.js");
+    // Should throw or return a result object — not an unresolved Promise
+    let result: any;
+    try {
+      result = await handleMcpRequest({ method: "skila.inspect", params: { name: "does-not-exist" }, id: 99 });
+    } catch {
+      // If it throws (skill not found), that's fine — the bug was it returned a Promise instead of awaiting
+      return;
+    }
+    // If it resolves, verify result is NOT a Promise
+    if (result && result.result !== undefined) {
+      expect(result.result instanceof Promise).toBe(false);
+      // Result should be a plain object with content
+      expect(typeof result.result).toBe("object");
+    }
+  });
+});

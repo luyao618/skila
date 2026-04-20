@@ -85,7 +85,7 @@ export async function handleMcpRequest(req) {
     }
     if (cmd === "inspect") {
         const { runInspect } = await import("../commands/inspect.js");
-        return { result: runInspect(req.params?.name, req.params?.version) };
+        return { result: await runInspect(req.params?.name, req.params?.version) };
     }
     if (cmd === "lint") {
         const { runLint } = await import("../commands/lint.js");

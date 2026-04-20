@@ -1,6 +1,18 @@
 #!/usr/bin/env node
 // skila CLI dispatcher (Phase 2 — real implementations).
 import { parseArgs } from "node:util";
+import { pathToFileURL } from "node:url";
+// Custom error class for user-facing errors (FIX-H20)
+export class SkilaError extends Error {
+    hint;
+    constructor(message, hint) {
+        super(message);
+        this.name = "SkilaError";
+        this.hint = hint;
+    }
+}
+const VALID_OUTCOMES = new Set(["success", "failure", "unknown"]);
+const VALID_STATUSES = new Set(["draft", "staging", "published", "archived", "disabled"]);
 async function dispatch(argv) {
     if (argv.length === 0 || argv[0] === "-h" || argv[0] === "--help" || argv[0] === "help") {
         process.stdout.write("skila — self-improving skill inventory controller\n\nCommands: distill, promote, graduate, reject, archive, disable, reactivate, rollback, feedback, lint, inspect, list, mcp, serve, doctor, stats\n");
@@ -26,7 +38,8 @@ async function dispatch(argv) {
                 "version": { type: "string" },
                 "status": { type: "string" },
                 "fix-storage": { type: "boolean" },
-                "yes": { type: "boolean" }
+                "yes": { type: "boolean" },
+                "port": { type: "string" }
             }
         });
     }
@@ -36,6 +49,15 @@ async function dispatch(argv) {
     }
     const positionals = parsed.positionals;
     const values = parsed.values;
+    // FIX-H21: enum validation
+    if (values["outcome"] !== undefined && !VALID_OUTCOMES.has(values["outcome"])) {
+        process.stderr.write(`skila: invalid --outcome '${values["outcome"]}' (must be one of: success, failure, unknown)\n`);
+        return 64;
+    }
+    if (values["status"] !== undefined && !VALID_STATUSES.has(values["status"])) {
+        process.stderr.write(`skila: invalid --status '${values["status"]}' (must be one of: draft, staging, published, archived, disabled)\n`);
+        return 64;
+    }
     switch (cmd) {
         case "distill": {
             const { runDistill } = await import("./commands/distill.js");
@@ -150,12 +172,27 @@ async function dispatch(argv) {
 // Bridge for hook to call collectFeedback synchronously.
 export { collectFeedback } from "./feedback/collector.js";
 export async function main(argv = process.argv.slice(2)) {
-    return dispatch(argv);
+    try {
+        return await dispatch(argv);
+    }
+    catch (err) {
+        if (err instanceof SkilaError) {
+            process.stderr.write(`skila: ${err.message}\n`);
+            if (err.hint)
+                process.stderr.write(`hint: ${err.hint}\n`);
+            if (process.env.SKILA_DEBUG === "1")
+                process.stderr.write((err.stack ?? "") + "\n");
+            return 1;
+        }
+        throw err;
+    }
 }
+// FIX-H19: Detect direct invocation via import.meta.url
 const invokedDirectly = (() => {
     try {
         const argv1 = process.argv[1] ?? "";
-        return argv1.endsWith("cli.js") || argv1.endsWith("cli.ts");
+        const fileUrl = pathToFileURL(argv1).href;
+        return import.meta.url === fileUrl;
     }
     catch {
         return false;
@@ -163,7 +200,16 @@ const invokedDirectly = (() => {
 })();
 if (invokedDirectly) {
     main().then((code) => process.exit(code)).catch((err) => {
-        process.stderr.write(`skila: fatal: ${err.stack ?? err}\n`);
+        if (err instanceof SkilaError) {
+            process.stderr.write(`skila: ${err.message}\n`);
+            if (err.hint)
+                process.stderr.write(`hint: ${err.hint}\n`);
+            if (process.env.SKILA_DEBUG === "1")
+                process.stderr.write(err.stack + "\n");
+        }
+        else {
+            process.stderr.write(`skila: fatal: ${err.stack ?? err}\n`);
+        }
         process.exit(1);
     });
 }

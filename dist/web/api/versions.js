@@ -12,8 +12,8 @@ export async function handleGetVersions(req, res, name) {
         const versions = await adapter.listVersions(name);
         sendJson(res, 200, versions);
     }
-    catch {
-        sendJson(res, 200, []);
+    catch (e) {
+        sendJson(res, 500, { error: "storage failure" });
     }
 }
 export async function handleGetDiff(req, res, name, from, to) {

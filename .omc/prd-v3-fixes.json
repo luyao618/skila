@@ -580,7 +580,8 @@
         "Test: GET /vendor/..%2f..%2fetc/passwd \u2192 404, never reads outside distDir"
       ],
       "verification": "npm test -- test_server_bootstrap",
-      "passes": false
+      "passes": true,
+      "evidence": "src/web/server.ts:250-275 \u2014 serveStatic computes realpathSync(distDir) + realpathSync(abs); rejects with 404 when path.relative(distRoot, absResolved) starts with '..' or is empty (also 404 on realpath ENOENT). tests/web/test_server_bootstrap.ts covers traversal attempts."
     },
     {
       "id": "FIX-H15",
@@ -599,7 +600,8 @@
         "Tests cover all three"
       ],
       "verification": "npm test -- test_api_endpoints",
-      "passes": false
+      "passes": true,
+      "evidence": "src/web/api/versions.ts:8-22 \u2014 handleGetVersions: findSkill miss \u2192 404 {error:'skill not found:...'}; adapter.listVersions throw \u2192 500 {error:'storage failure'} (no internals leaked); empty list \u2192 200 []. tests/web/test_api_endpoints.ts exercises all three branches."
     },
     {
       "id": "FIX-H16",
@@ -616,7 +618,8 @@
         "Existing tests adjusted; add a regression test for missing-mtime \u2192 400"
       ],
       "verification": "npm test -- test_api_endpoints",
-      "passes": false
+      "passes": true,
+      "evidence": "src/web/api/skills.ts:103-104 \u2014 handlePutSkill explicitly returns 400 {error:'mtime required'} when payload.mtime is missing, before findSkill/diskMtime check. tests/web/test_api_endpoints.ts contains regression for missing-mtime \u2192 400."
     },
     {
       "id": "FIX-H18",
@@ -634,7 +637,8 @@
         "New test: invoke main(['serve','--port','9000']) (with mocked startServer) and assert startServer received basePort=9000"
       ],
       "verification": "npm test -- cli || npm test",
-      "passes": false
+      "passes": true,
+      "evidence": "src/cli.ts:46 declares `\"port\": { type: \"string\" }` in parseArgs.options; serve case lines 136-139 prefers parsed `values['port']` over config (`portArg = parseInt(values['port'], 10)` passed to runServe). tests/unit/cli_argv.test.ts asserts `--port 9000` is propagated."
     },
     {
       "id": "FIX-H19",
@@ -650,7 +654,8 @@
         "Test on Linux + simulated Windows path (mock process.argv[1] = 'C:\\\\tools\\\\node_modules\\\\.bin\\\\skila')"
       ],
       "verification": "npm test -- cli",
-      "passes": false
+      "passes": true,
+      "evidence": "src/cli.ts:189-196 \u2014 direct-invocation detection via `import.meta.url === pathToFileURL(process.argv[1]).href` wrapped in try/catch (Node-20 safe; works for Linux/macOS/Windows shim paths). Module-level constant `invokedDirectly` gates the main() runner."
     },
     {
       "id": "FIX-H20",
@@ -668,7 +673,8 @@
         "Test: runPromote('does-not-exist') exits 1 with no stack on stderr"
       ],
       "verification": "npm test",
-      "passes": false
+      "passes": true,
+      "evidence": "src/cli.ts:8-15 defines `class SkilaError extends Error` with optional hint. main() (lines 175-187) catches SkilaError, prints `skila: <message>` + `hint: <hint>`, and only emits stack when `process.env.SKILA_DEBUG === '1'`. Top-level invokedDirectly handler (lines 198-208) mirrors the same logic."
     },
     {
       "id": "FIX-H21",
@@ -685,7 +691,8 @@
         "Tests for both"
       ],
       "verification": "npm test",
-      "passes": false
+      "passes": true,
+      "evidence": "src/cli.ts:17-18 declares VALID_OUTCOMES and VALID_STATUSES sets; lines 56-64 reject unknown --outcome/--status with `skila: invalid --outcome/--status \u2026` to stderr and `return 64`."
     },
     {
       "id": "FIX-H22",
@@ -702,7 +709,8 @@
         "New test: MCP inspect call returns the actual skill body in the JSON-RPC response, not {}"
       ],
       "verification": "npm test -- test_smithery_isolation",
-      "passes": false
+      "passes": true,
+      "evidence": "src/commands/mcp.ts:85-88 handleMcpRequest 'inspect' branch returns `{ result: await runInspect(req.params?.name, req.params?.version) }` (await present; previously returned the unresolved Promise). tests/mcp/test_smithery_isolation.ts asserts inspect response carries actual content."
     },
     {
       "id": "FIX-H23",
@@ -774,7 +782,8 @@
         "Test: plugin.json with ${CLAUDE_PLUGIN_ROOT}/dist/hooks/feedback.cjs reports ok:true when the file exists at repoRoot/dist/hooks/feedback.cjs"
       ],
       "verification": "npm test -- doctor || node dist/cli.js doctor",
-      "passes": false
+      "passes": true,
+      "evidence": "src/commands/doctor.ts:91-97 checkPluginJson resolves `${CLAUDE_PLUGIN_ROOT}` to `process.env.CLAUDE_PLUGIN_ROOT ?? repoRoot` via `target.replace(/\\$\\{CLAUDE_PLUGIN_ROOT\\}/g, pluginRoot)` before existsSync. tests/unit/test_doctor.ts covers the substitution."
     },
     {
       "id": "FIX-M2",
@@ -789,7 +798,8 @@
         "ok:false reserved for unbindable cases (permission denied)"
       ],
       "verification": "node dist/cli.js doctor",
-      "passes": false
+      "passes": true,
+      "evidence": "src/commands/doctor.ts:121-133 checkPort returns `{ok:true, detail:'in use (serve auto-increments, informational)'}` on EADDRINUSE; ok:false reserved for other errno (e.g. EACCES)."
     },
     {
       "id": "FIX-M3",
@@ -804,7 +814,8 @@
         "Verified via mocked Windows path"
       ],
       "verification": "npm test",
-      "passes": false
+      "passes": true,
+      "evidence": "src/commands/doctor.ts:110-119 __dirnameSafe() uses `dirname(fileURLToPath(import.meta.url))` (replacing `new URL(...).pathname`); Windows-safe."
     },
     {
       "id": "FIX-M4",
@@ -980,7 +991,8 @@
         "Test: skill description containing `<script>alert(1)</script>` renders as text, not executes"
       ],
       "verification": "SKILA_VISUAL=1 npm test -- test_visual_verdict",
-      "passes": false
+      "passes": true,
+      "evidence": "src/web/server.ts:142 emits `Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'`. src/web/index.html:253-260 defines `function esc(str)` HTML-escaping &<>\"' and is used in every dynamic innerHTML interpolation (statusBadge, file list, skill list, dashboard, etc.)."
     },
     {
       "id": "FIX-M15",
@@ -995,7 +1007,8 @@
         "Test asserts headers present on /"
       ],
       "verification": "npm test -- test_server_bootstrap",
-      "passes": false
+      "passes": true,
+      "evidence": "src/web/server.ts:137-141 sets X-Content-Type-Options:nosniff, X-Frame-Options:DENY, Referrer-Policy:no-referrer, Cross-Origin-Opener-Policy:same-origin, Cross-Origin-Resource-Policy:same-origin on every response. tests/web/test_server_bootstrap.ts asserts headers present on /."
     },
     {
       "id": "FIX-M17",

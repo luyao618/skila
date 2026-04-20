@@ -249,6 +249,16 @@
       let feedback = null;
 
       // ── Helpers ───────────────────────────────────────────────────────────
+      // FIX-M14: HTML-escape helper to prevent XSS via innerHTML
+      function esc(str) {
+        return String(str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
       // FIX-C8: cookie is HttpOnly so document.cookie cannot read it.
       // The browser sends it automatically with credentials:'same-origin'
       // (the default for fetch on same-origin URLs).
@@ -265,7 +275,7 @@
                       archived:  { cls: "text-[#8b949e] bg-[#161b22]", label: "arc" },
                       disabled:  { cls: "text-[#484f58] bg-[#161b22]", label: "dis" } };
         const { cls, label } = map[status] ?? { cls: "text-[#8b949e]", label: status };
-        return `<span class="inline-block px-1 py-0.5 rounded text-[9px] font-mono font-medium ${cls}">${label}</span>`;
+        return `<span class="inline-block px-1 py-0.5 rounded text-[9px] font-mono font-medium ${cls}">${esc(label)}</span>`;
       }
 
       function relativeTime(iso) {
@@ -324,7 +334,7 @@
           ul.innerHTML = `<li class="text-[#484f58] italic">No ${etab} files</li>`;
         } else {
           ul.innerHTML = files.map(f =>
-            `<li><button class="text-[#58a6ff] hover:underline text-left" onclick="loadFile('${encodeURIComponent(f)}')">${f}</button></li>`
+            `<li><button class="text-[#58a6ff] hover:underline text-left" onclick="loadFile('${esc(encodeURIComponent(f))}')">${esc(f)}</button></li>`
           ).join("");
         }
       }
@@ -429,10 +439,10 @@
           for (const s of grouped[st]) {
             const isSel = s.name === selectedName;
             const stagingRing = s.status === "staging" ? " ring-1 ring-[#f0b429]" : "";
-            html += `<li role="option" aria-selected="${isSel}" data-name="${s.name}"
+            html += `<li role="option" aria-selected="${isSel}" data-name="${esc(s.name)}"
               class="flex items-center justify-between px-2 py-1.5 rounded cursor-pointer text-xs gap-1
               ${isSel ? "bg-[#21262d] text-[#e6edf3]" : "text-[#8b949e] hover:bg-[#1c2128] hover:text-[#e6edf3]"}${stagingRing}">
-              <span class="truncate flex-1" title="${s.name}">${s.name}</span>
+              <span class="truncate flex-1" title="${esc(s.name)}">${esc(s.name)}</span>
               ${statusBadge(s.status)}
             </li>`;
           }
@@ -665,14 +675,14 @@
         if (d.stagingBacklog?.length > 0) {
           stagingBacklog.classList.remove("hidden");
           document.getElementById("staging-backlog-list").innerHTML = d.stagingBacklog.map(n =>
-            `<li><button class="text-[#f0b429] hover:underline text-xs" onclick="switchToSkill('${n}')">${n}</button></li>`
+            `<li><button class="text-[#f0b429] hover:underline text-xs" onclick="switchToSkill('${esc(n)}')">${esc(n)}</button></li>`
           ).join("");
         }
         const lowSuccess = document.getElementById("low-success");
         if (d.lowSuccess?.length > 0) {
           lowSuccess.classList.remove("hidden");
           document.getElementById("low-success-list").innerHTML = d.lowSuccess.map(n =>
-            `<li class="text-xs">${n}</li>`).join("");
+            `<li class="text-xs">${esc(n)}</li>`).join("");
         }
       }
 
