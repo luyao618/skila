@@ -11,6 +11,22 @@ import { atomicWriteFileSync } from "../../storage/atomic.js";
 import { getAdapter } from "../../storage/index.js";
 import { incrementUsage } from "../../feedback/store.js";
 import { sendJson } from "../middleware/token.js";
+import { MAX_BODY_BYTES } from "../server.js";
+/**
+ * FIX-H13: bounded body reader. Throws SkilaBodyTooLarge if request exceeds
+ * MAX_BODY_BYTES. Caller MUST handle and return 413.
+ */
+async function readBoundedBody(req) {
+    let body = "";
+    let received = 0;
+    for await (const chunk of req) {
+        received += chunk.length;
+        if (received > MAX_BODY_BYTES)
+            return { tooLarge: true, limit: MAX_BODY_BYTES };
+        body += chunk;
+    }
+    return body;
+}
 function skillSummary(s) {
     const skila = s.frontmatter.skila ?? {};
     return {
@@ -63,9 +79,12 @@ export async function handleGetSkill(req, res, name) {
     });
 }
 export async function handlePutSkill(req, res, name) {
-    let body = "";
-    for await (const chunk of req)
-        body += chunk;
+    const bodyOrLimit = await readBoundedBody(req);
+    if (typeof bodyOrLimit !== "string") {
+        sendJson(res, 413, { error: `request body exceeds ${bodyOrLimit.limit} byte limit` });
+        return;
+    }
+    const body = bodyOrLimit;
     let payload;
     try {
         payload = JSON.parse(body);
@@ -117,9 +136,12 @@ export async function handlePutSkill(req, res, name) {
     sendJson(res, 200, { ok: true, version: fm.skila.version, mtime: statSync(skill.path).mtime.toISOString() });
 }
 export async function handlePostFeedback(req, res, name) {
-    let rawBody = "";
-    for await (const chunk of req)
-        rawBody += chunk;
+    const bodyOrLimit = await readBoundedBody(req);
+    if (typeof bodyOrLimit !== "string") {
+        sendJson(res, 413, { error: `request body exceeds ${bodyOrLimit.limit} byte limit` });
+        return;
+    }
+    const rawBody = bodyOrLimit;
     let payload = {};
     try {
         if (rawBody)

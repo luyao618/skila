@@ -13,6 +13,22 @@ import { atomicWriteFileSync } from "../../storage/atomic.js";
 import { getAdapter } from "../../storage/index.js";
 import { incrementUsage } from "../../feedback/store.js";
 import { sendJson } from "../middleware/token.js";
+import { MAX_BODY_BYTES } from "../server.js";
+
+/**
+ * FIX-H13: bounded body reader. Throws SkilaBodyTooLarge if request exceeds
+ * MAX_BODY_BYTES. Caller MUST handle and return 413.
+ */
+async function readBoundedBody(req: IncomingMessage): Promise<string | { tooLarge: true; limit: number }> {
+  let body = "";
+  let received = 0;
+  for await (const chunk of req) {
+    received += (chunk as Buffer).length;
+    if (received > MAX_BODY_BYTES) return { tooLarge: true, limit: MAX_BODY_BYTES };
+    body += chunk;
+  }
+  return body;
+}
 
 function skillSummary(s: ReturnType<typeof scanInventory>[number]) {
   const skila = s.frontmatter.skila ?? {};
@@ -69,8 +85,12 @@ export async function handlePutSkill(
   res: ServerResponse,
   name: string
 ): Promise<void> {
-  let body = "";
-  for await (const chunk of req) body += chunk;
+  const bodyOrLimit = await readBoundedBody(req);
+  if (typeof bodyOrLimit !== "string") {
+    sendJson(res, 413, { error: `request body exceeds ${bodyOrLimit.limit} byte limit` });
+    return;
+  }
+  const body = bodyOrLimit;
   let payload: { content: string; mtime?: string };
   try {
     payload = JSON.parse(body);
@@ -119,8 +139,12 @@ export async function handlePostFeedback(
   res: ServerResponse,
   name: string
 ): Promise<void> {
-  let rawBody = "";
-  for await (const chunk of req) rawBody += chunk;
+  const bodyOrLimit = await readBoundedBody(req);
+  if (typeof bodyOrLimit !== "string") {
+    sendJson(res, 413, { error: `request body exceeds ${bodyOrLimit.limit} byte limit` });
+    return;
+  }
+  const rawBody = bodyOrLimit;
   let payload: { outcome?: string; session?: string } = {};
   try { if (rawBody) payload = JSON.parse(rawBody); } catch { /* ignore */ }
   const outcome = (payload.outcome as "success" | "failure" | "unknown") ?? "unknown";

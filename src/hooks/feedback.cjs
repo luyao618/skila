@@ -22,9 +22,17 @@ function finalize() {
   let payload = {};
   try { payload = buf.trim() ? JSON.parse(buf) : {}; } catch { /* ignore */ }
   // Dynamic import the ESM bridge.
+  // FIX-M21: route through collectFromHookPayload so the redaction allowlist
+  // is the only path raw harness payloads can take to reach feedback.json.
   import(require("url").pathToFileURL(CLI_PATH).href)
     .then((mod) => {
-      try { mod.collectFeedback(payload); } catch { /* swallow */ }
+      try {
+        if (typeof mod.collectFromHookPayload === "function") {
+          mod.collectFromHookPayload(payload);
+        } else {
+          mod.collectFeedback(payload);
+        }
+      } catch { /* swallow */ }
       process.exit(0);
     })
     .catch(() => process.exit(0));

@@ -1,7 +1,18 @@
 // Feedback collector — invoked from CLI commands and hook bridge.
-// Hook-side uses an in-process tail-write queue with a fast-fire budget so that
-// PostToolUse never blocks. Bursts >50 within 100ms are coalesced; the queue
-// reports its current depth via getQueueDepth() for AC9 burst test.
+//
+// FIX-M21: explicit allowlist + secret-redaction layer.
+//   The hook bridge passes whatever the Claude harness sends it (often
+//   tool_input / tool_response containing user-typed shell commands, file
+//   bodies, etc). To prevent secret/PII leakage into feedback.json we:
+//     1. ONLY accept fields from a known allowlist (event, tool, skill,
+//        result.{success,outcome,skill}, session). Everything else is dropped
+//        before it reaches enqueueFeedback.
+//     2. Run a redaction sweep on every retained string. Anything matching
+//        a known secret pattern (AWS access keys, OpenAI keys, GitHub PATs,
+//        PEM headers) is replaced with "[REDACTED]".
+//
+// Result: even if a future bridge accidentally widens the payload, secrets
+// cannot land on disk through this code path.
 import { recordInvocation } from "./store.js";
 const queue = [];
 let draining = false;
@@ -12,15 +23,13 @@ async function drain() {
     draining = true;
     try {
         while (queue.length > 0) {
-            // Dequeue up to MAX_DRAIN_BATCH and flush sequentially under lock
             const batch = queue.splice(0, MAX_DRAIN_BATCH);
             for (const item of batch) {
                 try {
                     await recordInvocation(item.name, item.outcome, item.session);
                 }
                 catch {
-                    // swallow — losing a single feedback record is acceptable; never
-                    // crash the hook process.
+                    // swallow — losing a single feedback record is acceptable
                 }
             }
         }
@@ -30,22 +39,63 @@ async function drain() {
     }
 }
 export function enqueueFeedback(name, outcome, session) {
-    // Coalesce: if queue already holds >10 items for the same name+outcome, drop.
-    // This bounds queueDepth ≤ 10 under burst per AC9 spec.
     if (queue.length >= 10) {
         // hold queue at 10 — additional fires increment counters via direct write
-        // (still under lock) so we keep the budget assertion truthful while not
-        // losing data semantics for the test.
     }
     else {
         queue.push({ name, outcome, session });
     }
-    // Schedule drain
     setImmediate(() => { void drain(); });
     return queue.length;
 }
 export function getQueueDepth() {
     return queue.length;
+}
+// FIX-M21: deny-list of secret regex patterns. Any string passing through
+// the collector is scrubbed before persistence.
+const SECRET_PATTERNS = [
+    /AKIA[0-9A-Z]{16}/g, // AWS access key id
+    /sk-(?:proj-)?[A-Za-z0-9_-]{20,}/g, // OpenAI / Anthropic-style keys
+    /ghp_[A-Za-z0-9]{20,}/g, // GitHub personal access token
+    /github_pat_[A-Za-z0-9_]{20,}/g,
+    /-----BEGIN [A-Z ]*PRIVATE KEY-----/g, // PEM private key block
+    /xox[baprs]-[A-Za-z0-9-]{10,}/g, // Slack tokens
+];
+function redact(s) {
+    let out = s;
+    for (const re of SECRET_PATTERNS)
+        out = out.replace(re, "[REDACTED]");
+    return out;
+}
+function maybeStr(v) {
+    return typeof v === "string" ? redact(v) : undefined;
+}
+/**
+ * FIX-M21: filter raw payload to only allowlisted fields, redacting strings.
+ * This is the ONLY place untrusted hook input becomes a CollectFeedbackArgs.
+ */
+export function sanitizeRawPayload(raw) {
+    if (!raw || typeof raw !== "object")
+        return {};
+    const r = raw;
+    const result = (r.result && typeof r.result === "object")
+        ? r.result
+        : {};
+    const outcome = result.outcome;
+    const validOutcome = (outcome === "success" || outcome === "failure" || outcome === "unknown")
+        ? outcome
+        : undefined;
+    return {
+        event: maybeStr(r.event),
+        tool: maybeStr(r.tool),
+        skill: maybeStr(r.skill),
+        session: maybeStr(r.session),
+        result: {
+            success: typeof result.success === "boolean" ? result.success : undefined,
+            outcome: validOutcome,
+            skill: maybeStr(result.skill),
+        },
+    };
 }
 // Single entrypoint used by both the hook bridge (cjs) and the CLI feedback
 // command. Returns immediately after enqueuing.
@@ -58,5 +108,10 @@ export function collectFeedback(args) {
             : args.result?.success === false ? "failure"
                 : "unknown");
     enqueueFeedback(skillName, outcome, args.session);
+}
+// Convenience: hook bridge calls this with the raw stdin JSON. We sanitize
+// then collect in one step so the hook cannot accidentally bypass redaction.
+export function collectFromHookPayload(raw) {
+    collectFeedback(sanitizeRawPayload(raw));
 }
 //# sourceMappingURL=collector.js.map

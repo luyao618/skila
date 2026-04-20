@@ -378,9 +378,12 @@ describe("AC14, AC15 — skill detail + write endpoints", () => {
     process.env.SKILA_HOME = home;
     process.env.SKILA_SKILLS_ROOT = skills;
     resetAdapterCacheForTests();
-    const { base } = await spin(17816);
+    const { base, token } = await spin(17816);
     try {
-      const r = await fetch(`${base}/api/skills/pub-skill/file?path=scripts/helper.ts`);
+      // FIX-C7: file endpoint now requires token (auth tightening for arbitrary-read defense).
+      const r = await fetch(`${base}/api/skills/pub-skill/file?path=scripts/helper.ts`, {
+        headers: { "x-skila-token": token },
+      });
       expect(r.status).toBe(200);
       const d = await r.json();
       expect(d.content).toContain("export function help");

@@ -239,20 +239,23 @@
       let originalDoc = "";
       let dirty = false;
       let currentMtime = null;
-      let serverToken = getCookie("skila_token") ?? "";
+      // FIX-C8: token is HttpOnly — JS cannot read it. Browser auto-rides the
+      // skila_token cookie on every same-origin request, so we never need to
+      // attach an explicit header. The previous getCookie() / X-Skila-Token
+      // path was dead code (HttpOnly cookie returns undefined to JS).
       let activeTab = "skills";
       let activeEditorTab = "skill";
       let versions = [];
       let feedback = null;
 
       // ── Helpers ───────────────────────────────────────────────────────────
-      function getCookie(name) {
-        return document.cookie.split(";").map(c => c.trim()).find(c => c.startsWith(name + "="))?.split("=")[1];
-      }
+      // FIX-C8: cookie is HttpOnly so document.cookie cannot read it.
+      // The browser sends it automatically with credentials:'same-origin'
+      // (the default for fetch on same-origin URLs).
 
       function api(path, opts = {}) {
-        const headers = { "Content-Type": "application/json", "x-skila-token": serverToken, ...(opts.headers ?? {}) };
-        return fetch(path, { ...opts, headers });
+        const headers = { "Content-Type": "application/json", ...(opts.headers ?? {}) };
+        return fetch(path, { credentials: "same-origin", ...opts, headers });
       }
 
       function statusBadge(status) {

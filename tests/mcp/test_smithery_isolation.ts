@@ -43,7 +43,8 @@ describe("D5 — Smithery isolation", () => {
     });
     expect(ready).toBeTruthy();
     expect(ready.type).toBe("ready");
-    expect(String(ready.home)).toMatch(/skila-smithery-\d+/);
+    // FIX-M16: home is now mkdtemp-suffixed (random), not PID. Just assert prefix + tmpdir containment.
+    expect(String(ready.home)).toMatch(/skila-smithery-/);
     expect(ready.home.startsWith(tmpdir())).toBe(true);
 
     // Try to call disabled mutation command

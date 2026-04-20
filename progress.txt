@@ -30,3 +30,24 @@
 - Plan §5 prescribes Phase order strictly; Phase 1 must land complete before Phase 2 can begin (cli.ts stub is a Phase 1 deliverable that Phase 2 commands plug into)
 - AC23 evolution-path is THE acceptance gate; it depends on Phase 2/3/4 being green first
 - Use --critic=critic to keep verifier consistent with the plan's authoring critic context
+
+## Iteration 2 (2026-04-20) — Batch A security fixes
+
+Stories completed (6/6):
+- FIX-C7: src/web/api/files.ts — realpath + lstat symlink rejection + token-gate + 4 MiB cap
+- FIX-C8: token model coherence — HttpOnly cookie canonical, removed dead getCookie/X-Skila-Token JS path
+- FIX-H17: src/web/server.ts — Host validation (421) + Origin check on state-changing methods (403)
+- FIX-H13: src/web/api/skills.ts — readBoundedBody (1 MiB cap → 413) + Content-Type checks (415)
+- FIX-M16: src/commands/mcp.ts — mkdtempSync replaces PID path; pruneOrphanSmitheryDirs uses lstat (no symlink follow)
+- FIX-M21: src/feedback/collector.ts — sanitizeRawPayload allowlist + secret regex redaction; hook bridge routes through it
+
+Tests added:
+- tests/web/test_batch_a_security.ts (4 sub-suites covering C7/C8/H17/H13)
+- tests/mcp/test_smithery_mkdtemp.ts (M16)
+- tests/feedback/test_redact_allowlist.ts (M21)
+
+Tests modified:
+- tests/mcp/test_smithery_isolation.ts: regex updated to match mkdtemp suffix instead of PID
+- tests/web/test_api_endpoints.ts: file endpoint test now sends token (required by C7)
+
+Verification: npm run build green; npm test = 24 files / 90 pass / 1 skip.
