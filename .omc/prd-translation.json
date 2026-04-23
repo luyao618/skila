@@ -1,0 +1,79 @@
+{
+  "project": "skila-translation-v1",
+  "spec": ".omc/specs/deep-interview-skill-translation.md",
+  "plan": ".omc/plans/skill-translation-v1.md",
+  "stories": [
+    {
+      "id": "TR-01",
+      "title": "扩展 SkilaConfig 翻译配置字段",
+      "passes": true,
+      "acceptanceCriteria": [
+        "SkilaConfig 接口新增 translateTargetLang?, translateBaseUrl?, translateModel? 三个可选字段",
+        "loadConfig() 读取新字段，saveConfig() 保存新字段",
+        "npm run build 编译无错误"
+      ]
+    },
+    {
+      "id": "TR-02",
+      "title": "新建翻译 API handler (translate.ts)",
+      "passes": true,
+      "acceptanceCriteria": [
+        "src/web/api/translate.ts 新建，导出 handleTranslateSkill, handleGetTranslateSettings, handlePutTranslateSettings",
+        "handleTranslateSkill 用 raw fetch 调用 Anthropic /v1/messages API，60s AbortController 超时",
+        "默认读取 ANTHROPIC_BASE_URL + ANTHROPIC_API_KEY 环境变量，config 中的值可覆盖",
+        "翻译失败时返回有意义的错误信息（网络错误/4xx-5xx/超时分别处理）",
+        "handleGetTranslateSettings 返回当前翻译配置",
+        "handlePutTranslateSettings 保存翻译配置到 config.json"
+      ]
+    },
+    {
+      "id": "TR-03",
+      "title": "注册翻译路由到 server.ts",
+      "passes": true,
+      "acceptanceCriteria": [
+        "POST /api/skills/:name/translate 路由注册，需要 token + JSON content-type",
+        "GET /api/settings/translate 路由注册",
+        "PUT /api/settings/translate 路由注册，需要 token + JSON content-type",
+        "npm run build 编译无错误"
+      ]
+    },
+    {
+      "id": "TR-04",
+      "title": "前端翻译按钮 + 左右分栏对照视图",
+      "passes": true,
+      "acceptanceCriteria": [
+        "Skill 详情页有 Translate 按钮",
+        "点击按钮后显示 loading 状态",
+        "翻译完成后显示左右分栏（左英文原文，右翻译），翻译侧只读",
+        "翻译失败时显示错误提示",
+        "翻译面板不影响编辑器的 dirty 状态",
+        "按钮有防抖处理防止重复点击"
+      ]
+    },
+    {
+      "id": "TR-05",
+      "title": "Settings 页面翻译配置表单",
+      "passes": true,
+      "acceptanceCriteria": [
+        "Settings tab 新增 Translation 区块",
+        "包含目标语言选择（默认 zh，支持 ja/ko/fr/de/es 等主流语言）",
+        "包含自定义 API Key 输入框（password 类型）",
+        "包含自定义 Base URL 输入框",
+        "Save 按钮调用 PUT /api/settings/translate 保存",
+        "进入 Settings tab 时自动加载当前配置"
+      ]
+    },
+    {
+      "id": "TR-06",
+      "title": "集成测试",
+      "passes": true,
+      "acceptanceCriteria": [
+        "tests/web/translate.test.ts 存在",
+        "测试 handleGetTranslateSettings 返回默认值",
+        "测试 handlePutTranslateSettings 保存后 loadConfig 包含新字段",
+        "npm test 全部通过",
+        "npm run build 编译无错误"
+      ]
+    }
+  ]
+}

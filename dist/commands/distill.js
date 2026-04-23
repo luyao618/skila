@@ -1,21 +1,26 @@
 // distill orchestrator: extractor → judge → validate → write to .draft-skila/.
 // Hallucination guard: judge UPDATE→X but X not in inventory → downgrade to NEW
 // + structured warning.
-import { join } from "node:path";
-import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { readFileSync, mkdirSync } from "node:fs";
 import { extractCandidateFromFixture } from "../distill/extractor.js";
+import { extractSupportingFiles } from "../distill/file-extractor.js";
 import { scanInventory, findSkill } from "../inventory/scanner.js";
 import { callJudge } from "../judge/judge.js";
 import { sanitizeJustification } from "../judge/prompt.js";
 import { statusDir } from "../config/config.js";
 import { validateSkillContent } from "../validate/validate.js";
 import { writeSkillFile, bumpVersion, appendChangelog } from "./_lifecycle.js";
+import { atomicWriteFileSync } from "../storage/atomic.js";
 export async function runDistill(opts) {
     if (!opts.fromFixture)
         throw new Error("distill: --from-fixture required in Phase 2");
     const candidate = extractCandidateFromFixture(opts.fromFixture);
     const inventory = scanInventory();
-    const { output } = await callJudge({ candidate, inventory });
+    // Phase A: Rule-based extraction of supporting file candidates
+    const fileCandidates = extractSupportingFiles(candidate.toolTrace);
+    candidate.supportingFiles = fileCandidates;
+    const { output } = await callJudge({ candidate, inventory, supportingFileCandidates: fileCandidates });
     const warnings = [];
     let mode = output.decision;
     let target = output.target_name ?? undefined;
@@ -34,6 +39,25 @@ export async function runDistill(opts) {
         target = undefined;
     }
     let proposal;
+    // Collect confirmed supporting files from judge (with path validation)
+    const VALID_FILE_TYPES = new Set(["scripts", "references", "assets"]);
+    const confirmedFiles = (output.supporting_files ?? [])
+        .filter(f => f.action !== "remove")
+        .filter(f => {
+        const parts = f.path.split("/");
+        if (parts.length < 2 || !VALID_FILE_TYPES.has(parts[0]))
+            return false;
+        if (f.path.includes("..") || f.path.startsWith("/"))
+            return false;
+        return true;
+    })
+        .map(f => ({ path: f.path, content: f.content, fileType: f.path.split("/")[0] }));
+    // Fallback: if judge didn't return supporting_files (heuristic mode), use rule-extracted candidates with confidence >= 0.6
+    const finalFiles = confirmedFiles.length > 0
+        ? confirmedFiles
+        : fileCandidates
+            .filter(f => f.confidence >= 0.6)
+            .map(f => ({ path: f.path, content: f.content, fileType: f.fileType }));
     if (mode === "UPDATE" && target) {
         const existing = findSkill(target);
         const parentVersion = existing.skila.version || "0.0.0";
@@ -47,7 +71,8 @@ export async function runDistill(opts) {
             body: candidate.body,
             description: candidate.description,
             changelogEntry: `Revised from session ${candidate.sessionId ?? "(unknown)"}: ${sanitizeJustification(output.justification)}`,
-            warnings
+            warnings,
+            supportingFiles: finalFiles.length > 0 ? finalFiles : undefined,
         };
     }
     else {
@@ -58,11 +83,17 @@ export async function runDistill(opts) {
             body: candidate.body,
             description: candidate.description,
             changelogEntry: `Initial draft from session ${candidate.sessionId ?? "(unknown)"}`,
-            warnings
+            warnings,
+            supportingFiles: finalFiles.length > 0 ? finalFiles : undefined,
         };
     }
     if (opts.dryRun) {
         return { proposal, judgeOutput: output, warnings };
+    }
+    // Append bundled resource references to SKILL.md body
+    if (finalFiles.length > 0) {
+        const refs = output.skill_body_references ?? finalFiles.map(f => `- **${f.path}**: ${f.fileType === "scripts" ? "Execute" : f.fileType === "references" ? "Load" : "Use"} as needed`);
+        proposal.body = (proposal.body || "") + "\n\n## Bundled Resources\n\n" + refs.join("\n") + "\n";
     }
     // Build clean frontmatter (no skila block) + sidecar metadata.
     const fm = {
@@ -84,6 +115,14 @@ export async function runDistill(opts) {
     const file = await writeSkillFile(draftDir, fm, proposal.body || `# ${proposal.name}\n\n${proposal.description}\n`, sidecar);
     // Validate after write (SKILL.md only — sidecar is schema-validated elsewhere).
     validateSkillContent(readFileSync(file, "utf8"), { expectedDirName: proposal.name });
+    // Write supporting files
+    if (proposal.supportingFiles?.length) {
+        for (const sf of proposal.supportingFiles) {
+            const filePath = join(draftDir, sf.path);
+            mkdirSync(dirname(filePath), { recursive: true });
+            atomicWriteFileSync(filePath, sf.content);
+        }
+    }
     return { proposal, judgeOutput: output, warnings, draftPath: file };
 }
 //# sourceMappingURL=distill.js.map

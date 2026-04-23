@@ -43,6 +43,7 @@ export interface Skill {
   frontmatter: SkillFrontmatter;
   body: string;
   skila: SkilaMetadata;
+  supportingFiles?: string[];  // ["references/api.md", "scripts/fetch.py"]
 }
 
 export interface SkillProposal {
@@ -55,6 +56,7 @@ export interface SkillProposal {
   description: string;
   changelogEntry: string;
   warnings?: WarningRecord[];
+  supportingFiles?: Array<{ path: string; content: string; fileType: SupportingFileType }>;
 }
 
 export interface JudgeOutput {
@@ -63,6 +65,8 @@ export interface JudgeOutput {
   similarity: number | null;
   justification: string;
   suggested_version_bump: "patch" | "minor" | "major";
+  supporting_files?: Array<{ path: string; content: string; action: "keep" | "remove" | "modify" }> | null;
+  skill_body_references?: string[];
 }
 
 export interface WarningRecord {
@@ -101,4 +105,16 @@ export interface DistillCandidate {
   toolTrace: ToolTraceEntry[];
   sessionId?: string;
   fixturePath?: string;
+  supportingFiles?: SupportingFileCandidate[];
+}
+
+export type SupportingFileType = "scripts" | "references" | "assets";
+
+export interface SupportingFileCandidate {
+  path: string;              // "scripts/deploy.sh"
+  content: string;
+  fileType: SupportingFileType;
+  source: "tool-trace" | "judge";
+  confidence: number;        // 0-1
+  reason: string;            // "Bash command repeated 3 times"
 }

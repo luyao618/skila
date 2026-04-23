@@ -13,6 +13,9 @@ export interface SkilaConfig {
   lockTimeoutMs: number;
   lockStaleMs: number;
   disabledHooks: string[];
+  translateTargetLang?: string;
+  translateBaseUrl?: string;
+  translateModel?: string;
 }
 
 export const DEFAULT_CONFIG: SkilaConfig = {

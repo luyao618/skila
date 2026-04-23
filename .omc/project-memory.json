@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1776663663037,
+  "lastScanned": 1776954666603,
   "projectRoot": "/Users/yao/work/code/personal/skila",
   "techStack": {
     "languages": [
@@ -48,6 +48,7 @@
     "devCommand": null,
     "scripts": {
       "build": "tsc",
+      "build-hooks": "node -e \"import('esbuild').then(({build})=>build({entryPoints:['src/feedback/collector.ts'],bundle:true,format:'cjs',platform:'node',target:'node20',minify:true,treeShaking:true,legalComments:'none',outfile:'dist/hooks/feedback-entry.cjs'}))\"",
       "postbuild": "node scripts/postbuild.mjs",
       "test": "vitest run",
       "test:watch": "vitest",
@@ -58,7 +59,7 @@
     }
   },
   "conventions": {
-    "namingStyle": "camelCase",
+    "namingStyle": "camelCase/PascalCase",
     "importStyle": null,
     "testPattern": null,
     "fileOrganization": null
@@ -83,7 +84,7 @@
       "path": "dist",
       "purpose": "Distribution/build output",
       "fileCount": 4,
-      "lastAccessed": 1776663663028,
+      "lastAccessed": 1776954666596,
       "keyFiles": [
         "cli.js",
         "cli.js.map",
@@ -95,14 +96,14 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 0,
-      "lastAccessed": 1776663663030,
+      "lastAccessed": 1776954666598,
       "keyFiles": []
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 3,
-      "lastAccessed": 1776663663030,
+      "lastAccessed": 1776954666598,
       "keyFiles": [
         "ac18-screenshots.mjs",
         "postbuild.mjs",
@@ -112,15 +113,15 @@
     "skills": {
       "path": "skills",
       "purpose": null,
-      "fileCount": 0,
-      "lastAccessed": 1776663663031,
+      "fileCount": 1,
+      "lastAccessed": 1776954666598,
       "keyFiles": []
     },
     "src": {
       "path": "src",
       "purpose": "Source code",
       "fileCount": 2,
-      "lastAccessed": 1776663663031,
+      "lastAccessed": 1776954666598,
       "keyFiles": [
         "cli.ts",
         "types.ts"
@@ -130,7 +131,7 @@
       "path": "tests",
       "purpose": "Test files",
       "fileCount": 1,
-      "lastAccessed": 1776663663032,
+      "lastAccessed": 1776954666598,
       "keyFiles": [
         "_helpers.ts"
       ]
@@ -139,7 +140,7 @@
       "path": "dist/config",
       "purpose": "Configuration files",
       "fileCount": 2,
-      "lastAccessed": 1776663663032,
+      "lastAccessed": 1776954666598,
       "keyFiles": [
         "config.js",
         "config.js.map"
@@ -149,7 +150,7 @@
       "path": "src/config",
       "purpose": "Configuration files",
       "fileCount": 1,
-      "lastAccessed": 1776663663033,
+      "lastAccessed": 1776954666599,
       "keyFiles": [
         "config.ts"
       ]
@@ -158,27 +159,33 @@
       "path": "tests/fixtures",
       "purpose": "Test fixtures",
       "fileCount": 0,
-      "lastAccessed": 1776663663033,
+      "lastAccessed": 1776954666599,
       "keyFiles": []
     }
   },
   "hotPaths": [
     {
       "path": "src/web/index.html",
-      "accessCount": 21,
-      "lastAccessed": 1776695299929,
+      "accessCount": 95,
+      "lastAccessed": 1776962454784,
       "type": "file"
     },
     {
       "path": "src/cli.ts",
-      "accessCount": 19,
-      "lastAccessed": 1776694677194,
+      "accessCount": 22,
+      "lastAccessed": 1776956071058,
       "type": "file"
     },
     {
       "path": "README.md",
-      "accessCount": 11,
-      "lastAccessed": 1776664403881,
+      "accessCount": 12,
+      "lastAccessed": 1776956023691,
+      "type": "file"
+    },
+    {
+      "path": "src/config/config.ts",
+      "accessCount": 10,
+      "lastAccessed": 1776957949307,
       "type": "file"
     },
     {
@@ -206,21 +213,15 @@
       "type": "file"
     },
     {
-      "path": "skills/skila/SKILL.md",
-      "accessCount": 7,
-      "lastAccessed": 1776579330790,
-      "type": "file"
-    },
-    {
       "path": "src/types.ts",
-      "accessCount": 7,
-      "lastAccessed": 1776693363775,
+      "accessCount": 8,
+      "lastAccessed": 1776956031386,
       "type": "file"
     },
     {
-      "path": "src/config/config.ts",
-      "accessCount": 6,
-      "lastAccessed": 1776693195163,
+      "path": "skills/skila/SKILL.md",
+      "accessCount": 8,
+      "lastAccessed": 1776956057700,
       "type": "file"
     },
     {

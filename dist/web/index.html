@@ -40,25 +40,25 @@
       /* Sparkline */
       .sparkline { display: inline-block; vertical-align: middle; }
       /* Markdown preview pane */
-      #preview { color: #e6edf3; line-height: 1.65; font-size: 14px; }
-      #preview h1 { font-size: 1.7em; font-weight: 600; margin: 0.6em 0 0.4em; padding-bottom: 0.3em; border-bottom: 1px solid #30363d; }
-      #preview h2 { font-size: 1.4em; font-weight: 600; margin: 1em 0 0.4em; padding-bottom: 0.25em; border-bottom: 1px solid #30363d; }
-      #preview h3 { font-size: 1.2em; font-weight: 600; margin: 0.9em 0 0.35em; }
-      #preview h4, #preview h5, #preview h6 { font-weight: 600; margin: 0.8em 0 0.3em; }
-      #preview p { margin: 0.6em 0; }
-      #preview a { color: #58a6ff; text-decoration: none; }
-      #preview a:hover { text-decoration: underline; }
-      #preview ul, #preview ol { padding-left: 1.6em; margin: 0.5em 0; }
-      #preview li { margin: 0.2em 0; }
-      #preview code { font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace; font-size: 0.88em; background: #161b22; padding: 0.15em 0.4em; border-radius: 4px; border: 1px solid #30363d; }
-      #preview pre { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px 14px; overflow-x: auto; margin: 0.7em 0; }
-      #preview pre code { background: transparent; padding: 0; border: none; font-size: 0.9em; }
-      #preview blockquote { border-left: 3px solid #30363d; color: #8b949e; padding: 0.2em 1em; margin: 0.7em 0; }
-      #preview table { border-collapse: collapse; margin: 0.7em 0; }
-      #preview th, #preview td { border: 1px solid #30363d; padding: 6px 12px; }
-      #preview th { background: #161b22; font-weight: 600; }
-      #preview hr { border: none; border-top: 1px solid #30363d; margin: 1.2em 0; }
-      #preview img { max-width: 100%; }
+      #preview-rendered { color: #e6edf3; line-height: 1.65; font-size: 14px; }
+      #preview-rendered h1 { font-size: 1.7em; font-weight: 600; margin: 0.6em 0 0.4em; padding-bottom: 0.3em; border-bottom: 1px solid #30363d; }
+      #preview-rendered h2 { font-size: 1.4em; font-weight: 600; margin: 1em 0 0.4em; padding-bottom: 0.25em; border-bottom: 1px solid #30363d; }
+      #preview-rendered h3 { font-size: 1.2em; font-weight: 600; margin: 0.9em 0 0.35em; }
+      #preview-rendered h4, #preview-rendered h5, #preview-rendered h6 { font-weight: 600; margin: 0.8em 0 0.3em; }
+      #preview-rendered p { margin: 0.6em 0; }
+      #preview-rendered a { color: #58a6ff; text-decoration: none; }
+      #preview-rendered a:hover { text-decoration: underline; }
+      #preview-rendered ul, #preview-rendered ol { padding-left: 1.6em; margin: 0.5em 0; }
+      #preview-rendered li { margin: 0.2em 0; }
+      #preview-rendered code { font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace; font-size: 0.88em; background: #161b22; padding: 0.15em 0.4em; border-radius: 4px; border: 1px solid #30363d; }
+      #preview-rendered pre { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px 14px; overflow-x: auto; margin: 0.7em 0; }
+      #preview-rendered pre code { background: transparent; padding: 0; border: none; font-size: 0.9em; }
+      #preview-rendered blockquote { border-left: 3px solid #30363d; color: #8b949e; padding: 0.2em 1em; margin: 0.7em 0; }
+      #preview-rendered table { border-collapse: collapse; margin: 0.7em 0; }
+      #preview-rendered th, #preview-rendered td { border: 1px solid #30363d; padding: 6px 12px; }
+      #preview-rendered th { background: #161b22; font-weight: 600; }
+      #preview-rendered hr { border: none; border-top: 1px solid #30363d; margin: 1.2em 0; }
+      #preview-rendered img { max-width: 100%; }
       /* View-mode pills */
       .view-pill { padding: 2px 10px; font-size: 11px; border-radius: 4px; color: #8b949e; cursor: pointer; }
       .view-pill:hover { color: #e6edf3; }
@@ -170,20 +170,27 @@
             <div id="view-mode" class="flex items-center gap-1 shrink-0 ml-3">
               <button id="view-raw" class="view-pill active" data-view="raw">Raw</button>
               <button id="view-preview" class="view-pill" data-view="preview">Preview</button>
+              <button id="view-translate" class="view-pill" data-view="translate">Translate</button>
             </div>
           </div>
           <!-- Description -->
           <div id="active-skill-desc" class="px-4 py-1.5 text-xs text-[#8b949e] border-b border-[#30363d] shrink-0 hidden"></div>
-          <!-- Editor container -->
-          <div id="editor" class="flex-1 min-h-0 overflow-hidden" aria-label="CodeMirror editor"></div>
-          <!-- Markdown preview container -->
-          <div id="preview" class="flex-1 min-h-0 overflow-y-auto px-6 py-4 hidden" aria-label="Markdown preview"></div>
+          <!-- Editor + side panel wrapper -->
+          <div id="editor-wrapper" class="flex flex-1 min-h-0">
+            <!-- Editor container (always visible) -->
+            <div id="editor" class="flex-1 min-h-0 overflow-hidden" aria-label="CodeMirror editor"></div>
+            <!-- Right side panel: preview or translate (hidden in Raw mode) -->
+            <div id="side-panel" class="hidden flex-1 min-h-0 overflow-y-auto border-l border-[#30363d]">
+              <div id="preview-rendered" class="px-6 py-4"></div>
+              <div id="translate-result" class="hidden p-4 font-mono text-sm text-[#e6edf3] whitespace-pre-wrap leading-relaxed"></div>
+            </div>
+          </div>
           <!-- File list (for scripts/refs/assets tabs) -->
           <div id="file-list-view" class="flex-1 min-h-0 overflow-y-auto p-4 hidden">
             <ul id="file-list" class="space-y-1 text-xs font-mono"></ul>
           </div>
           <!-- Save bar -->
-          <div class="px-4 py-2 border-t border-[#30363d] flex items-center justify-between text-xs shrink-0 bg-[#161b22]">
+          <div id="save-bar" class="px-4 py-2 border-t border-[#30363d] flex items-center justify-between text-xs shrink-0 bg-[#161b22]">
             <div class="flex gap-2">
               <button id="btn-save" class="px-3 py-1.5 rounded bg-[#238636] hover:bg-[#2ea043] text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed" disabled title="Save (Cmd+S)">Save</button>
               <button id="btn-discard" class="px-3 py-1.5 rounded border border-[#30363d] hover:border-[#58a6ff] text-[#8b949e] hover:text-[#e6edf3] disabled:opacity-40 disabled:cursor-not-allowed" disabled>Discard</button>
@@ -262,6 +269,36 @@
             <span id="cfg-floor" class="font-mono text-[#e6edf3]">10</span>
           </div>
         </div>
+        <!-- Translation settings -->
+        <h2 class="text-sm font-semibold mt-8 mb-3 text-[#e6edf3]">Translation</h2>
+        <div class="space-y-3 max-w-md">
+          <label class="block text-xs text-[#8b949e]">Target Language
+            <select id="set-translate-lang" class="mt-1 block w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#388bfd]">
+              <option value="zh">Chinese (Simplified)</option>
+              <option value="zh-TW">Chinese (Traditional)</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="es">Spanish</option>
+              <option value="pt">Portuguese</option>
+              <option value="ru">Russian</option>
+              <option value="ar">Arabic</option>
+              <option value="it">Italian</option>
+            </select>
+          </label>
+          <label class="block text-xs text-[#8b949e]">Custom API Key <span class="text-[#484f58]">(optional, overrides env var)</span>
+            <input id="set-translate-key" type="password" class="mt-1 block w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#388bfd]" placeholder="sk-ant-…" />
+          </label>
+          <label class="block text-xs text-[#8b949e]">Custom Base URL <span class="text-[#484f58]">(optional, overrides env var)</span>
+            <input id="set-translate-url" type="text" class="mt-1 block w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#388bfd]" placeholder="e.g. http://localhost:7024" />
+          </label>
+          <div class="flex items-center gap-3">
+            <button id="btn-save-translate" class="px-3 py-1.5 rounded bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-medium">Save Translation Settings</button>
+            <span id="translate-settings-status" class="text-xs text-[#3fb950] hidden">Saved!</span>
+          </div>
+          <p id="translate-env-info" class="text-[10px] text-[#484f58] hidden"></p>
+        </div>
       </div>
 
     </div><!-- #app -->
@@ -283,9 +320,12 @@
       // path was dead code (HttpOnly cookie returns undefined to JS).
       let activeTab = "skills";
       let activeEditorTab = "skill";
-      let activeView = "raw";          // "raw" | "preview"
+      let activeView = "raw";          // "raw" | "preview" | "translate"
       let activeFilePath = null;       // null = SKILL.md; otherwise relative path inside skill dir
       let activeFileMtime = null;      // mtime of currently loaded supporting file (for optimistic concurrency)
+      let translateTargetLang = "zh";  // translation target language
+      let translateBusy = false;       // debounce guard
+      let translateAbort = null;       // AbortController for in-flight translation
       let versions = [];
       let feedback = null;
 
@@ -372,20 +412,19 @@
           const active = b.dataset.etab === etab;
           b.className = `editor-tab px-2 py-1 text-xs rounded ${active ? "bg-[#21262d] text-[#e6edf3]" : "text-[#8b949e] hover:text-[#e6edf3]"}`;
         });
-        const editorEl = document.getElementById("editor");
-        const previewEl = document.getElementById("preview");
+        const editorWrapper = document.getElementById("editor-wrapper");
         const fileListEl = document.getElementById("file-list-view");
         if (etab === "skill") {
           // Reset to SKILL.md
           activeFilePath = null;
           activeFileMtime = null;
           fileListEl.classList.add("hidden");
+          editorWrapper.classList.remove("hidden");
           updateSubbarVisibility();
           if (selectedSkill) loadEditorContent(selectedSkill);
         } else {
           // Show file list
-          editorEl.classList.add("hidden");
-          previewEl.classList.add("hidden");
+          editorWrapper.classList.add("hidden");
           fileListEl.classList.remove("hidden");
           document.getElementById("editor-subbar").classList.add("hidden");
           renderFileList(etab);
@@ -402,7 +441,7 @@
         viewMode.classList.toggle("hidden", !isMd);
         crumb.textContent = activeFilePath === null ? "SKILL.md" : activeFilePath;
         // Non-markdown files cannot use Preview — force Raw
-        if (!isMd && activeView === "preview") {
+        if (!isMd && (activeView === "preview" || activeView === "translate")) {
           activeView = "raw";
           renderViewMode();
         } else {
@@ -410,30 +449,101 @@
         }
       }
 
+      let _sidePanelLastScrollTop = 0;
       function renderViewMode() {
-        const editorEl = document.getElementById("editor");
-        const previewEl = document.getElementById("preview");
+        const sidePanel = document.getElementById("side-panel");
+        const previewRendered = document.getElementById("preview-rendered");
+        const translateResult = document.getElementById("translate-result");
+        _sidePanelLastScrollTop = 0;
+        sidePanel.scrollTop = 0;
         document.getElementById("view-raw").classList.toggle("active", activeView === "raw");
         document.getElementById("view-preview").classList.toggle("active", activeView === "preview");
+        document.getElementById("view-translate").classList.toggle("active", activeView === "translate");
         if (activeView === "preview") {
-          editorEl.classList.add("hidden");
-          previewEl.classList.remove("hidden");
-          // Render current buffer (not stale disk)
+          previewRendered.classList.remove("hidden");
+          translateResult.classList.add("hidden");
+          sidePanel.classList.remove("hidden");
           const src = cmView ? cmView.state.doc.toString() : "";
           try {
-            previewEl.innerHTML = marked.parse(src);
+            previewRendered.innerHTML = marked.parse(src);
           } catch (e) {
-            previewEl.innerHTML = `<pre style="color:#f85149">Preview render error: ${String(e)}</pre>`;
+            previewRendered.innerHTML = `<pre style="color:#f85149">Preview render error: ${String(e)}</pre>`;
           }
+        } else if (activeView === "translate") {
+          translateResult.classList.remove("hidden");
+          previewRendered.classList.add("hidden");
+          sidePanel.classList.remove("hidden");
         } else {
-          previewEl.classList.add("hidden");
-          editorEl.classList.remove("hidden");
+          sidePanel.classList.add("hidden");
         }
       }
+
+      // Sync: side-panel scroll → editor scroll (delta-based)
+      (function () {
+        const sidePanel = document.getElementById("side-panel");
+        sidePanel.addEventListener("scroll", () => {
+          if (activeView !== "preview" && activeView !== "translate") return;
+          const scroller = document.querySelector("#editor .cm-scroller");
+          if (!scroller) return;
+          const delta = sidePanel.scrollTop - _sidePanelLastScrollTop;
+          _sidePanelLastScrollTop = sidePanel.scrollTop;
+          scroller.scrollTop += delta;
+        });
+      })();
 
       // Wire view-mode pills
       document.getElementById("view-raw").addEventListener("click", () => { activeView = "raw"; renderViewMode(); });
       document.getElementById("view-preview").addEventListener("click", () => { activeView = "preview"; renderViewMode(); });
+      document.getElementById("view-translate").addEventListener("click", async () => {
+        if (!selectedName || translateBusy) return;
+        translateBusy = true;
+        const btn = document.getElementById("view-translate");
+        const resultEl = document.getElementById("translate-result");
+        btn.textContent = "Translating…";
+        resultEl.textContent = "";
+        activeView = "translate";
+        renderViewMode();
+        const abort = new AbortController();
+        translateAbort = abort;
+        try {
+          const r = await fetch(`/api/skills/${encodeURIComponent(selectedName)}/translate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-skila-token": document.cookie.match(/skila_token=([^;]+)/)?.[1] || "" },
+            body: JSON.stringify({ targetLang: translateTargetLang }),
+            signal: abort.signal,
+          });
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({ error: "unknown error" }));
+            alert("Translation failed: " + d.error);
+            return;
+          }
+          // Stream SSE response
+          const reader = r.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split("\n");
+            buf = lines.pop() ?? "";
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              try {
+                const evt = JSON.parse(line.slice(6));
+                if (evt.type === "delta") resultEl.textContent += evt.text;
+                else if (evt.type === "error") { alert("Translation failed: " + evt.error); return; }
+              } catch { /* skip */ }
+            }
+          }
+        } catch (e) {
+          if (e.name !== "AbortError") alert("Translation failed: " + e.message);
+        } finally {
+          translateAbort = null;
+          btn.textContent = "Translate";
+          translateBusy = false;
+        }
+      });
 
       function renderFileList(etab) {
         if (!selectedSkill) return;
@@ -539,8 +649,7 @@
                 document.getElementById("btn-discard").disabled = !dirty;
                 // Live re-render preview if it's currently shown
                 if (activeView === "preview") {
-                  const previewEl = document.getElementById("preview");
-                  try { previewEl.innerHTML = marked.parse(update.state.doc.toString()); }
+                  try { document.getElementById("preview-rendered").innerHTML = marked.parse(update.state.doc.toString()); }
                   catch { /* ignore transient parse errors */ }
                 }
               }
@@ -633,6 +742,12 @@
       // ── Select skill ─────────────────────────────────────────────────────
       async function selectSkill(name) {
         selectedName = name;
+        // Clear translate cache and abort in-flight translation when switching skills
+        if (translateAbort) { translateAbort.abort(); translateAbort = null; }
+        translateBusy = false;
+        document.getElementById("view-translate").textContent = "Translate";
+        document.getElementById("translate-result").textContent = "";
+        if (activeView === "translate") { activeView = "raw"; }
         renderSkillList();
         const r = await api(`/api/skills/${encodeURIComponent(name)}`);
         if (!r.ok) return;
@@ -907,6 +1022,58 @@
       // ── Init ─────────────────────────────────────────────────────────────
       switchMainTab("skills");
       loadSkills();
+
+
+      // ── Translation settings ───────────────────────────────────────────
+      async function loadTranslateSettings() {
+        try {
+          const r = await api("/api/settings/translate");
+          if (!r.ok) return;
+          const d = await r.json();
+          translateTargetLang = d.targetLang || "zh";
+          document.getElementById("set-translate-lang").value = translateTargetLang;
+          document.getElementById("set-translate-url").value = d.customBaseUrl || "";
+          const info = document.getElementById("translate-env-info");
+          const parts = [];
+          if (d.hasEnvApiKey) parts.push("ANTHROPIC_API_KEY detected");
+          if (d.hasEnvBaseUrl) parts.push("ANTHROPIC_BASE_URL detected");
+          if (parts.length) { info.textContent = "Env: " + parts.join(", "); info.classList.remove("hidden"); }
+          else info.classList.add("hidden");
+        } catch { /* ignore */ }
+      }
+      document.getElementById("btn-save-translate").addEventListener("click", async () => {
+        const payload = {
+          targetLang: document.getElementById("set-translate-lang").value,
+          customBaseUrl: document.getElementById("set-translate-url").value,
+        };
+        // Only send key if user typed something (don't send empty to avoid clearing)
+        const keyVal = document.getElementById("set-translate-key").value;
+        if (keyVal) payload.customApiKey = keyVal;
+        try {
+          const r = await api("/api/settings/translate", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (r.ok) {
+            translateTargetLang = payload.targetLang;
+            const status = document.getElementById("translate-settings-status");
+            status.classList.remove("hidden");
+            setTimeout(() => status.classList.add("hidden"), 2000);
+          } else {
+            const d = await r.json();
+            alert("Save failed: " + d.error);
+          }
+        } catch (e) { alert("Save failed: " + e.message); }
+      });
+
+      // ── Tab switching (patch to load translate settings) ────────────
+      const origTabHandler = document.querySelectorAll(".tab-btn");
+      origTabHandler.forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (btn.dataset.tab === "settings") loadTranslateSettings();
+        });
+      });
 
       // Refresh every 30s
       setInterval(loadSkills, 30_000);

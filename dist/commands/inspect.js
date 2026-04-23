@@ -1,6 +1,6 @@
 // CLI: skila inspect <name> [--version v0.X.Y].
-import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { findSkill } from "../inventory/scanner.js";
 import { ensureSkilaHome } from "../config/config.js";
 import { getAdapter } from "../storage/index.js";
@@ -26,6 +26,30 @@ export async function runInspect(name, version) {
     const skill = findSkill(name);
     if (!skill)
         throw new Error(`inspect: skill not found: ${name}`);
-    return { path: skill.path, content: readFileSync(skill.path, "utf8") };
+    let content = readFileSync(skill.path, "utf8");
+    // Show supporting files
+    const ALLOWED_SUBDIRS = ["scripts", "references", "assets"];
+    const skillDir = dirname(skill.path);
+    const supportingFiles = [];
+    for (const subdir of ALLOWED_SUBDIRS) {
+        const subdirPath = join(skillDir, subdir);
+        if (existsSync(subdirPath)) {
+            const walk = (dir, prefix) => {
+                for (const e of readdirSync(dir)) {
+                    const full = join(dir, e);
+                    const rel = prefix ? `${prefix}/${e}` : e;
+                    if (statSync(full).isDirectory())
+                        walk(full, rel);
+                    else
+                        supportingFiles.push(`${subdir}/${rel}`);
+                }
+            };
+            walk(subdirPath, "");
+        }
+    }
+    if (supportingFiles.length > 0) {
+        content += "\n\n--- Supporting Files ---\n" + supportingFiles.map(f => `  ${f}`).join("\n") + "\n";
+    }
+    return { path: skill.path, content };
 }
 //# sourceMappingURL=inspect.js.map

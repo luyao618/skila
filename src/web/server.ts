@@ -17,6 +17,7 @@ import { handleGetVersions, handleGetDiff } from "./api/versions.js";
 import { handleLifecycle } from "./api/lifecycle.js";
 import { handleGetFeedback } from "./api/feedback.js";
 import { handleGetDashboard } from "./api/dashboard.js";
+import { handleTranslateSkill, handleGetTranslateSettings, handlePutTranslateSettings } from "./api/translate.js";
 import { runMigrateSidecar } from "../inventory/migrate.js";
 
 let sidecarMigrationRan = false;
@@ -248,11 +249,29 @@ async function route(req: IncomingMessage, res: ServerResponse, distDir: string,
       if (!checkContentTypeJsonOptional(req, res)) return;
       await handlePostFeedback(req, res, name); return;
     }
+    // POST /api/skills/:name/translate
+    if (method === "POST" && sub === "translate") {
+      if (!validateToken(req, res, serverToken)) return;
+      if (!checkContentTypeJson(req, res)) return;
+      await handleTranslateSkill(req, res, name); return;
+    }
     // POST /api/skills/:name/{lifecycle action}
     if (method === "POST" && LIFECYCLE_ACTIONS.has(sub)) {
       if (!validateToken(req, res, serverToken)) return;
       await handleLifecycle(req, res, name, sub, url.searchParams); return;
     }
+  }
+
+  // GET /api/settings/translate
+  if (method === "GET" && path === "/api/settings/translate") {
+    if (!validateToken(req, res, serverToken)) return;
+    await handleGetTranslateSettings(req, res); return;
+  }
+  // PUT /api/settings/translate
+  if (method === "PUT" && path === "/api/settings/translate") {
+    if (!validateToken(req, res, serverToken)) return;
+    if (!checkContentTypeJson(req, res)) return;
+    await handlePutTranslateSettings(req, res); return;
   }
 
   sendJson(res, 404, { error: `not found: ${method} ${path}` });
