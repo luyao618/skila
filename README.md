@@ -23,26 +23,21 @@ npm i -g @luyao618/skila
 # Claude Code plugin
 /plugin marketplace add luyao618/skila
 /plugin install skila@skila
-
-# MCP server
-npx -y @luyao618/skila mcp
 ```
 
 ### Quick start
 
 ```sh
-/skila                         # inside Claude Code — distill current session
-skila serve                    # web control panel at http://127.0.0.1:7777
-skila list                     # list skills by status
-skila inspect <name>           # view a skill
+/skila                         # run inside Claude Code — distill current session into a reusable skill
+skila serve                    # run in terminal — launch web control panel at http://127.0.0.1:7777
 ```
 
 ### How it works
 
-`/skila` or `skila distill` turns a Claude Code session into a complete skill directory — automatically.
+`/skila` turns a Claude Code session into a complete skill directory — automatically.
 
 <p align="center">
-  <img src="docs/images/pipeline.png" alt="Skila distill pipeline" width="480" />
+  <img src="docs/images/pipeline.png" alt="Skila distill pipeline" width="400" />
 </p>
 
 The pipeline has three stages:
@@ -56,7 +51,7 @@ The pipeline has three stages:
 `skila serve` launches a three-pane Obsidian-style dashboard:
 
 <p align="center">
-  <img src="docs/images/dashboard.jpg" alt="Skila web control panel" width="900" />
+  <img src="docs/images/dashboard.jpg" alt="Skila web control panel" width="960" />
 </p>
 
 - **Skill editor** — CodeMirror 6 markdown editor with raw / preview / translate views
@@ -87,26 +82,21 @@ npm i -g @luyao618/skila
 # Claude Code 插件
 /plugin marketplace add luyao618/skila
 /plugin install skila@skila
-
-# MCP 服务器
-npx -y @luyao618/skila mcp
 ```
 
 ### 快速开始
 
 ```sh
-/skila                         # 在 Claude Code 中一键提炼当前会话
-skila serve                    # 打开 Web 控制面板 http://127.0.0.1:7777
-skila list                     # 按状态列出所有 skill
-skila inspect <name>           # 查看 skill 内容
+/skila                         # 在 Claude Code 中运行 — 将当前会话提炼为可复用的 skill
+skila serve                    # 在终端中运行 — 启动 Web 控制面板 http://127.0.0.1:7777
 ```
 
 ### 工作原理
 
-`/skila` 或 `skila distill` 将 Claude Code 会话自动转化为完整的 skill 目录。
+`/skila` 将 Claude Code 会话自动转化为完整的 skill 目录。
 
 <p align="center">
-  <img src="docs/images/pipeline.png" alt="Skila distill 流程" width="600" />
+  <img src="docs/images/pipeline.png" alt="Skila distill 流程" width="400" />
 </p>
 
 流程分三个阶段：
@@ -120,7 +110,7 @@ skila inspect <name>           # 查看 skill 内容
 `skila serve` 启动三栏 Obsidian 风格的管理面板：
 
 <p align="center">
-  <img src="docs/images/dashboard.jpg" alt="Skila Web 控制面板" width="800" />
+  <img src="docs/images/dashboard.jpg" alt="Skila Web 控制面板" width="960" />
 </p>
 
 - **Skill 编辑器** — CodeMirror 6 Markdown 编辑器，支持原文 / 预览 / 翻译视图
