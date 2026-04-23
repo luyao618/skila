@@ -4,7 +4,7 @@
 
 **Self-improving skill manager for Claude Code**
 
-Automatically distill coding sessions into reusable, versioned skills — complete with scripts, references, and assets.
+Automatically distill coding sessions into reusable, versioned skills — and continuously refine them as you work.
 
 [English](#english) | [中文](#中文)
 
@@ -28,8 +28,11 @@ npm i -g @luyao618/skila
 ### Quick start
 
 ```sh
-/skila                         # run inside Claude Code — distill current session into a reusable skill
-skila serve                    # run in terminal — launch web control panel at http://127.0.0.1:7777
+# run inside Claude Code — distill current session into a reusable skill
+/skila
+
+# run in terminal — launch web control panel
+skila serve
 ```
 
 ### How it works
@@ -60,14 +63,14 @@ The pipeline has three stages:
 - **Lifecycle management** — filter and transition skills across statuses: draft → staging → published → archived / disabled
 - **Feedback inspector** — success rate, usage count, invocation history
 
-### License
-
-MIT © yao 2026
-
 ### Inspired by
 
 - [hermes-agent](https://github.com/NousResearch/hermes-agent) — autonomous agent with self-managed skill lifecycle
 - [memex](https://github.com/iamtouchskyer/memex) — Zettelkasten-based persistent knowledge system
+
+### License
+
+MIT © yao 2026
 
 ---
 
@@ -87,8 +90,11 @@ npm i -g @luyao618/skila
 ### 快速开始
 
 ```sh
-/skila                         # 在 Claude Code 中运行 — 将当前会话提炼为可复用的 skill
-skila serve                    # 在终端中运行 — 启动 Web 控制面板 http://127.0.0.1:7777
+# 在 Claude Code 中运行 — 将当前会话提炼为可复用的 skill
+/skila
+
+# 在终端中运行 — 启动 Web 控制面板
+skila serve
 ```
 
 ### 工作原理
@@ -119,11 +125,11 @@ skila serve                    # 在终端中运行 — 启动 Web 控制面板 
 - **生命周期管理** — 按状态筛选和流转 skill：draft → staging → published → archived / disabled
 - **反馈面板** — 成功率、使用次数、调用历史
 
-### 许可证
-
-MIT © yao 2026
-
 ### 灵感来源
 
 - [hermes-agent](https://github.com/NousResearch/hermes-agent) — 具有自管理 skill 生命周期的自主 agent
 - [memex](https://github.com/iamtouchskyer/memex) — 基于 Zettelkasten 的持久化知识系统
+
+### 许可证
+
+MIT © yao 2026
