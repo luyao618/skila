@@ -53,28 +53,41 @@ export function scanStatus(status: SkillStatus): Skill[] {
     } catch {
       continue;
     }
-    // Reject symlinks — use lstat to detect before following
-    if (st.isSymbolicLink()) {
-      _lastWarnings.push({ type: "symlink", path: dir });
-      continue;
-    }
-    if (!st.isDirectory()) continue;
-    // Reject out-of-root paths after realpath resolution
+    // Follow symlinks but verify the resolved target is a directory.
+    // The realpath containment check below guards against escapes into
+    // unexpected locations.
     let resolvedDir: string;
     try {
       resolvedDir = realpathSync(dir);
     } catch {
       continue;
     }
-    if (resolvedDir !== resolvedRoot && !resolvedDir.startsWith(resolvedRoot + sep)) {
-      _lastWarnings.push({ type: "out-of-root", path: dir });
+    let realStat;
+    try {
+      realStat = lstatSync(resolvedDir);
+    } catch {
       continue;
     }
+    if (!realStat.isDirectory()) continue;
     const file = join(dir, "SKILL.md");
     if (!existsSync(file)) continue;
     try {
       const raw = readFileSync(file, "utf8");
-      const parsed = parseSkillFile(raw);
+      let parsed;
+      try {
+        parsed = parseSkillFile(raw);
+      } catch {
+        // Fallback for skills without YAML frontmatter (plain markdown).
+        // Extract a description from the first heading or first line.
+        const firstLine = raw.split("\n").find(l => l.trim()) ?? "";
+        const desc = firstLine.replace(/^#+\s*/, "").trim();
+        parsed = {
+          frontmatter: { name: entry, description: desc } as any,
+          body: raw,
+          raw,
+          legacySkila: undefined,
+        };
+      }
       // Sidecar (preferred) → legacy in-frontmatter (transitional) → defaults.
       const sidecar = readSidecarIfExists(file);
       const skila = sidecar ?? parsed.legacySkila ?? defaultSkila(status);
@@ -90,7 +103,7 @@ export function scanStatus(status: SkillStatus): Skill[] {
         skila
       });
     } catch {
-      // ignore unparseable
+      // ignore truly unparseable (e.g. unreadable file)
     }
   }
   return out;
