@@ -1,5 +1,5 @@
 // Inventory scanner: walks 5 status dirs and parses SKILL.md files.
-import { readdirSync, readFileSync, lstatSync, realpathSync, existsSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, lstatSync, realpathSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { parseSkillFile } from "./frontmatter.js";
 import { readSidecarIfExists, defaultSkila } from "./sidecar.js";
@@ -45,12 +45,9 @@ export function scanStatus(status) {
         catch {
             continue;
         }
-        // FIX-H12: reject symlinked skill directories
-        if (st.isSymbolicLink()) {
-            _lastWarnings.push({ type: "symlink", path: dir });
-            continue;
-        }
-        // Verify the resolved target is a directory and stays within root.
+        // Follow symlinks but verify the resolved target is a directory.
+        // The realpath containment check below guards against escapes into
+        // unexpected locations.
         let resolvedDir;
         try {
             resolvedDir = realpathSync(dir);
@@ -94,35 +91,13 @@ export function scanStatus(status) {
             // Status on disk (which dir the file lives in) wins over what the
             // sidecar / legacy block claims, so the inventory matches reality.
             skila.status = status;
-            // Scan for supporting files in subdirectories
-            const supportingFiles = [];
-            const ALLOWED_SUBDIRS = ["scripts", "references", "assets"];
-            for (const subdir of ALLOWED_SUBDIRS) {
-                const subdirPath = join(dir, subdir);
-                if (existsSync(subdirPath) && statSync(subdirPath).isDirectory()) {
-                    const walkDir = (d, prefix) => {
-                        for (const childEntry of readdirSync(d)) {
-                            const full = join(d, childEntry);
-                            const rel = prefix ? `${prefix}/${childEntry}` : childEntry;
-                            if (statSync(full).isDirectory()) {
-                                walkDir(full, rel);
-                            }
-                            else {
-                                supportingFiles.push(`${subdir}/${rel}`);
-                            }
-                        }
-                    };
-                    walkDir(subdirPath, "");
-                }
-            }
             out.push({
                 name: parsed.frontmatter.name ?? entry,
                 status,
                 path: file,
                 frontmatter: parsed.frontmatter,
                 body: parsed.body,
-                skila,
-                supportingFiles
+                skila
             });
         }
         catch {
