@@ -437,14 +437,16 @@
 
       function renderFileList(etab) {
         if (!selectedSkill) return;
+        const subDir = etab === "scripts" ? "scripts" : etab === "refs" ? "references" : "assets";
         const files = etab === "scripts" ? (selectedSkill.scripts ?? []) :
                       etab === "refs"    ? (selectedSkill.references ?? []) :
                                            (selectedSkill.assets ?? []);
         const ul = document.getElementById("file-list");
+        let html = "";
         if (files.length === 0) {
-          ul.innerHTML = `<li class="text-[#484f58] italic">No ${etab} files</li>`;
+          html = `<li class="text-[#484f58] italic">No ${etab} files</li>`;
         } else {
-          ul.innerHTML = files.map(f => {
+          html = files.map(f => {
             const editable = isTextFile(f);
             const safeF = esc(f);
             const safeEnc = esc(encodeURIComponent(f));
@@ -453,10 +455,44 @@
             }
             return `<li><span class="text-[#484f58] cursor-not-allowed" title="binary file (open externally)">${safeF}</span></li>`;
           }).join("");
-          ul.querySelectorAll("button[data-fpath]").forEach(btn => {
-            btn.addEventListener("click", () => loadFile(btn.dataset.fpath));
-          });
         }
+        // "New file" button
+        html += `<li class="mt-3"><button id="btn-new-file" class="px-3 py-1.5 rounded border border-dashed border-[#30363d] hover:border-[#388bfd] text-[#8b949e] hover:text-[#e6edf3] text-xs w-full text-left" data-subdir="${esc(subDir)}">+ New file…</button></li>`;
+        ul.innerHTML = html;
+        ul.querySelectorAll("button[data-fpath]").forEach(btn => {
+          btn.addEventListener("click", () => loadFile(btn.dataset.fpath));
+        });
+        ul.querySelector("#btn-new-file")?.addEventListener("click", () => createNewFile(subDir));
+      }
+
+      async function createNewFile(subDir) {
+        if (!selectedName) return;
+        const filename = prompt(`New file name in ${subDir}/ (e.g. helper.ts):`);
+        if (!filename || !filename.trim()) return;
+        const trimmed = filename.trim();
+        if (trimmed.includes("..") || trimmed.startsWith("/")) {
+          alert("Invalid filename"); return;
+        }
+        const relPath = `${subDir}/${trimmed}`;
+        if (!isTextFile(relPath)) {
+          alert(`Only text files are allowed. Supported extensions: ${[...TEXT_EXTS].join(", ")}`);
+          return;
+        }
+        // Create empty file via PUT
+        const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/file`, {
+          method: "PUT",
+          body: JSON.stringify({ path: relPath, content: "" }),
+        });
+        const d = await r.json();
+        if (!r.ok) {
+          alert(`Create failed: ${d.error ?? r.status}`); return;
+        }
+        // Re-fetch skill to get updated file lists, then open the new file
+        const sr = await api(`/api/skills/${encodeURIComponent(selectedName)}`);
+        if (sr.ok) {
+          selectedSkill = await sr.json();
+        }
+        await loadFile(encodeURIComponent(relPath));
       }
 
       async function loadFile(encodedPath) {
