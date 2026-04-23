@@ -40,7 +40,7 @@ skila serve
 `/skila` turns a Claude Code session into a complete skill directory — automatically.
 
 <p align="center">
-  <img src="docs/images/pipeline.png" alt="Skila distill pipeline" width="400" />
+  <img src="https://raw.githubusercontent.com/luyao618/skila/main/docs/images/pipeline.png" alt="Skila distill pipeline" width="400" />
 </p>
 
 The pipeline has three stages:
@@ -54,7 +54,7 @@ The pipeline has three stages:
 `skila serve` launches a three-pane Obsidian-style dashboard:
 
 <p align="center">
-  <img src="docs/images/dashboard.jpg" alt="Skila web control panel" width="960" />
+  <img src="https://raw.githubusercontent.com/luyao618/skila/main/docs/images/dashboard.jpg" alt="Skila web control panel" width="960" />
 </p>
 
 - **Skill editor** — CodeMirror 6 markdown editor with raw / preview / translate views
@@ -102,7 +102,7 @@ skila serve
 `/skila` 将 Claude Code 会话自动转化为完整的 skill 目录。
 
 <p align="center">
-  <img src="docs/images/pipeline.png" alt="Skila distill 流程" width="400" />
+  <img src="https://raw.githubusercontent.com/luyao618/skila/main/docs/images/pipeline.png" alt="Skila distill 流程" width="400" />
 </p>
 
 流程分三个阶段：
@@ -116,7 +116,7 @@ skila serve
 `skila serve` 启动三栏 Obsidian 风格的管理面板：
 
 <p align="center">
-  <img src="docs/images/dashboard.jpg" alt="Skila Web 控制面板" width="960" />
+  <img src="https://raw.githubusercontent.com/luyao618/skila/main/docs/images/dashboard.jpg" alt="Skila Web 控制面板" width="960" />
 </p>
 
 - **Skill 编辑器** — CodeMirror 6 Markdown 编辑器，支持原文 / 预览 / 翻译视图
