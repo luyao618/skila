@@ -55,7 +55,9 @@ function deterministicHeuristic(candidate, inventory) {
             target_name: best.name,
             similarity: best.score,
             justification: `heuristic-match score=${best.score.toFixed(2)} with ${best.name}`,
-            suggested_version_bump: "minor"
+            suggested_version_bump: "minor",
+            supporting_files: undefined,
+            skill_body_references: undefined
         };
     }
     return {
@@ -63,7 +65,9 @@ function deterministicHeuristic(candidate, inventory) {
         target_name: null,
         similarity: best?.score ?? 0,
         justification: "heuristic: no inventory match",
-        suggested_version_bump: "minor"
+        suggested_version_bump: "minor",
+        supporting_files: undefined,
+        skill_body_references: undefined
     };
 }
 export async function callJudge(args) {

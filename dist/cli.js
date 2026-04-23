@@ -39,7 +39,8 @@ async function dispatch(argv) {
                 "status": { type: "string" },
                 "fix-storage": { type: "boolean" },
                 "yes": { type: "boolean" },
-                "port": { type: "string" }
+                "port": { type: "string" },
+                "content-file": { type: "string" }
             }
         });
     }
@@ -175,6 +176,45 @@ async function dispatch(argv) {
         case "storage":
             process.stderr.write(`skila: unknown command 'storage' (use 'skila doctor --fix-storage' to reconcile storage)\n`);
             return 64;
+        case "files": {
+            const { runFilesList, runFilesWrite, runFilesRemove } = await import("./commands/files.js");
+            const sub = positionals[0]; // list, write, remove
+            const skillName = positionals[1];
+            if (!sub || !skillName) {
+                process.stderr.write("Usage: skila files <list|write|remove> <skill-name> [file-path] [--content-file <path>]\n");
+                return 64;
+            }
+            let result;
+            switch (sub) {
+                case "list":
+                    result = runFilesList(skillName);
+                    break;
+                case "write": {
+                    const fp = positionals[2];
+                    if (!fp) {
+                        process.stderr.write("skila files write: file-path required\n");
+                        return 64;
+                    }
+                    const contentFile = values["content-file"];
+                    result = runFilesWrite(skillName, fp, contentFile);
+                    break;
+                }
+                case "remove": {
+                    const fp = positionals[2];
+                    if (!fp) {
+                        process.stderr.write("skila files remove: file-path required\n");
+                        return 64;
+                    }
+                    result = runFilesRemove(skillName, fp);
+                    break;
+                }
+                default:
+                    process.stderr.write(`skila files: unknown subcommand '${sub}'\n`);
+                    return 64;
+            }
+            process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+            return result.success ? 0 : 1;
+        }
         default:
             process.stderr.write(`skila: unknown command '${cmd}'\n`);
             return 64;
