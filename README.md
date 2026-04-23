@@ -42,7 +42,7 @@ skila inspect <name>           # view a skill
 `/skila` or `skila distill` turns a Claude Code session into a complete skill directory — automatically.
 
 <p align="center">
-  <img src="docs/images/pipeline.png" alt="Skila distill pipeline" width="600" />
+  <img src="docs/images/pipeline.png" alt="Skila distill pipeline" width="480" />
 </p>
 
 The pipeline has three stages:
@@ -56,7 +56,7 @@ The pipeline has three stages:
 `skila serve` launches a three-pane Obsidian-style dashboard:
 
 <p align="center">
-  <img src="docs/images/dashboard.jpg" alt="Skila web control panel" width="800" />
+  <img src="docs/images/dashboard.jpg" alt="Skila web control panel" width="900" />
 </p>
 
 - **Skill editor** — CodeMirror 6 markdown editor with raw / preview / translate views
@@ -68,6 +68,11 @@ The pipeline has three stages:
 ### License
 
 MIT © yao 2026
+
+### Inspired by
+
+- [hermes-agent](https://github.com/NousResearch/hermes-agent) — autonomous agent with self-managed skill lifecycle
+- [memex](https://github.com/iamtouchskyer/memex) — Zettelkasten-based persistent knowledge system
 
 ---
 
@@ -127,3 +132,8 @@ skila inspect <name>           # 查看 skill 内容
 ### 许可证
 
 MIT © yao 2026
+
+### 灵感来源
+
+- [hermes-agent](https://github.com/NousResearch/hermes-agent) — 具有自管理 skill 生命周期的自主 agent
+- [memex](https://github.com/iamtouchskyer/memex) — 基于 Zettelkasten 的持久化知识系统
