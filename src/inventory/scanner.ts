@@ -53,9 +53,12 @@ export function scanStatus(status: SkillStatus): Skill[] {
     } catch {
       continue;
     }
-    // Follow symlinks but verify the resolved target is a directory.
-    // The realpath containment check below guards against escapes into
-    // unexpected locations.
+    // FIX-H12: reject symlinked skill directories
+    if (st.isSymbolicLink()) {
+      _lastWarnings.push({ type: "symlink", path: dir });
+      continue;
+    }
+    // Verify the resolved target is a directory and stays within root.
     let resolvedDir: string;
     try {
       resolvedDir = realpathSync(dir);
