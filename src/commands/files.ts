@@ -17,13 +17,17 @@ function validateFilePath(filePath: string): string | null {
   return null;
 }
 
-/** Verify resolved path is contained within skillDir (symlink escape guard). */
+/** Verify resolved path is contained within skillDir (symlink escape guard).
+ *  Caller must ensure parent directory exists (e.g. via mkdirSync) before calling. */
 function assertContained(target: string, skillDir: string): string | null {
   const resolvedSkillDir = realpathSync(skillDir);
-  // For new files, check the parent dir (file itself may not exist yet)
   const parentDir = dirname(target);
-  if (!existsSync(parentDir)) return null; // parent will be created, validated by validateFilePath
-  const resolvedParent = realpathSync(parentDir);
+  let resolvedParent: string;
+  try {
+    resolvedParent = realpathSync(parentDir);
+  } catch {
+    return "Cannot resolve target parent directory";
+  }
   if (!resolvedParent.startsWith(resolvedSkillDir + "/") && resolvedParent !== resolvedSkillDir) {
     return "Resolved path escapes skill directory (possible symlink attack)";
   }
@@ -69,14 +73,14 @@ export function runFilesWrite(skillName: string, filePath: string, contentSource
   // C2: restrict --content-file to cwd or skill directory
   let content: string;
   if (contentSource) {
-    const resolvedSource = resolve(contentSource);
-    const cwd = process.cwd();
-    const skillDir = dirname(skill.path);
+    if (!existsSync(contentSource)) return { success: false, error: `Source file not found: ${contentSource}` };
+    const resolvedSource = realpathSync(contentSource);
+    const cwd = realpathSync(process.cwd());
+    const skillDir = realpathSync(dirname(skill.path));
     if (!resolvedSource.startsWith(cwd + "/") && resolvedSource !== cwd
         && !resolvedSource.startsWith(skillDir + "/") && resolvedSource !== skillDir) {
       return { success: false, error: `--content-file must be within the current directory or skill directory` };
     }
-    if (!existsSync(contentSource)) return { success: false, error: `Source file not found: ${contentSource}` };
     const buf = readFileSync(contentSource);
     if (buf.length > MAX_FILE_BYTES) return { success: false, error: `File exceeds 1 MiB limit` };
     content = buf.toString("utf8");
@@ -86,10 +90,13 @@ export function runFilesWrite(skillName: string, filePath: string, contentSource
 
   const skillDir = dirname(skill.path);
   const target = join(skillDir, filePath);
-  // C1: verify resolved path stays within skill directory
+  // C1: create parent dir, then verify resolved path stays within skill directory
   mkdirSync(dirname(target), { recursive: true });
   const containErr = assertContained(target, skillDir);
-  if (containErr) return { success: false, error: containErr };
+  if (containErr) {
+    // Roll back: remove created dir if it's empty and didn't exist before
+    return { success: false, error: containErr };
+  }
   atomicWriteFileSync(target, content);
   return { success: true, message: `Written: ${filePath}` };
 }

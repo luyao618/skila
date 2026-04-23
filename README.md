@@ -49,12 +49,9 @@ skila install-hooks            # (npm -g installs) merge PostToolUse+Stop hooks 
 
 When you run `skila distill`, the pipeline turns a Claude Code session into a complete, spec-compliant skill directory:
 
-```mermaid
-flowchart LR
-    A["Session\n+ Tool Trace"] -->|rule engine| B["Candidate\nFiles"]
-    B -->|LLM judge| C["Reviewed\nProposal"]
-    C --> D[".draft-skila/\nskill directory"]
-```
+<p align="center">
+  <img src="docs/images/pipeline.png" alt="Skila distill pipeline" width="600" />
+</p>
 
 **Three phases:**
 
@@ -115,7 +112,9 @@ Skila follows Claude Code's progressive disclosure model to minimize context win
 
 `skila serve` starts a single-file UI on `127.0.0.1:7777` (auto-increments on conflict). Three-pane Obsidian-style workspace: sidebar (filter / search / skills) → center (CodeMirror 6 SKILL.md editor) → inspector (versions / feedback / actions).
 
-> Screenshot placeholder — captured during Phase 3 visual gate (AC18 ≥ 7/10).
+<p align="center">
+  <img src="docs/images/dashboard.jpg" alt="Skila web control panel" width="800" />
+</p>
 
 ## License
 
