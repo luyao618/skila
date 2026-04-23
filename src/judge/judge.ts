@@ -3,12 +3,13 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
-import type { JudgeOutput, DistillCandidate, Skill } from "../types.js";
+import type { JudgeOutput, DistillCandidate, Skill, SupportingFileCandidate } from "../types.js";
 import { buildJudgePrompt } from "./prompt.js";
 
 export interface JudgeArgs {
   candidate: DistillCandidate;
   inventory: Skill[];
+  supportingFileCandidates?: SupportingFileCandidate[];
 }
 
 // Mock fixture map: tests/fixtures/judge-responses/<sessionName>.json
@@ -63,7 +64,9 @@ function deterministicHeuristic(candidate: DistillCandidate, inventory: Skill[])
       target_name: best.name,
       similarity: best.score,
       justification: `heuristic-match score=${best.score.toFixed(2)} with ${best.name}`,
-      suggested_version_bump: "minor"
+      suggested_version_bump: "minor",
+      supporting_files: undefined,
+      skill_body_references: undefined
     };
   }
   return {
@@ -71,7 +74,9 @@ function deterministicHeuristic(candidate: DistillCandidate, inventory: Skill[])
     target_name: null,
     similarity: best?.score ?? 0,
     justification: "heuristic: no inventory match",
-    suggested_version_bump: "minor"
+    suggested_version_bump: "minor",
+    supporting_files: undefined,
+    skill_body_references: undefined
   };
 }
 
