@@ -22,11 +22,6 @@ export async function handleLifecycle(req, res, name, action, query) {
                 sendJson(res, 200, await runArchive(name));
                 break;
             }
-            case "disable": {
-                const { runDisable } = await import("../../commands/disable.js");
-                sendJson(res, 200, await runDisable(name));
-                break;
-            }
             case "reactivate": {
                 const { runReactivate } = await import("../../commands/reactivate.js");
                 sendJson(res, 200, await runReactivate(name));

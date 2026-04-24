@@ -3,7 +3,7 @@ import { readFeedbackSync } from "../../feedback/store.js";
 import { sendJson } from "../middleware/token.js";
 export async function handleGetDashboard(req, res) {
     const skills = scanInventory();
-    const counts = { draft: 0, staging: 0, published: 0, archived: 0, disabled: 0 };
+    const counts = { draft: 0, staging: 0, published: 0, archived: 0 };
     for (const s of skills)
         counts[s.status] = (counts[s.status] ?? 0) + 1;
     const feedback = readFeedbackSync();

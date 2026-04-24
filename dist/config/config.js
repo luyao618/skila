@@ -37,8 +37,6 @@ export function statusDir(status) {
             return join(root, ".staging-skila");
         case "archived":
             return join(root, ".archived-skila");
-        case "disabled":
-            return join(root, ".disabled-skila");
     }
 }
 export function ensureSkilaHome() {
