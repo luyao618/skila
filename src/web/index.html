@@ -439,7 +439,14 @@
         const isMd = activeFilePath === null || isMarkdownFile(activeFilePath);
         subbar.classList.remove("hidden");
         viewMode.classList.toggle("hidden", !isMd);
-        crumb.textContent = activeFilePath === null ? "SKILL.md" : activeFilePath;
+        if (activeFilePath === null) {
+          crumb.textContent = selectedSkill?.path ?? "SKILL.md";
+        } else if (selectedSkill?.path) {
+          const dir = selectedSkill.path.replace(/\/[^/]+$/, "");
+          crumb.textContent = dir + "/" + activeFilePath;
+        } else {
+          crumb.textContent = activeFilePath;
+        }
         // Non-markdown files cannot use Preview — force Raw
         if (!isMd && (activeView === "preview" || activeView === "translate")) {
           activeView = "raw";
@@ -756,10 +763,7 @@
         document.getElementById("active-skill-name").textContent = name;
         document.getElementById("active-skill-version").textContent = `v${selectedSkill.version}`;
         const descEl = document.getElementById("active-skill-desc");
-        if (selectedSkill.description) {
-          descEl.textContent = selectedSkill.description;
-          descEl.classList.remove("hidden");
-        } else descEl.classList.add("hidden");
+        descEl.classList.add("hidden");
 
         // Staging ring on center pane header
         const nameEl = document.getElementById("active-skill-name");

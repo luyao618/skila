@@ -5,6 +5,7 @@
 
 import { existsSync, statSync, readdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { homedir } from "node:os";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { scanInventory, findSkill } from "../../inventory/scanner.js";
 import { validateSkillContent } from "../../validate/validate.js";
@@ -35,6 +36,7 @@ function skillSummary(s: Skill) {
   const skila = s.skila;
   return {
     name: s.name,
+    path: s.path.replace(homedir(), "~"),
     status: s.status,
     version: skila.version || "0.0.0",
     description: s.frontmatter.description ?? "",
