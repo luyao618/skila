@@ -43,6 +43,12 @@ skila serve
   <img src="https://raw.githubusercontent.com/luyao618/skila/main/docs/images/pipeline.png" alt="Skila distill pipeline" width="400" />
 </p>
 
+Here's `/skila` in action — distilling a debugging session into a new skill and updating an existing one:
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/luyao618/skila/main/docs/images/skill-distill.jpg" alt="Skila skill distill in action" width="960" />
+</p>
+
 The pipeline has three stages:
 
 1. **Rule-based extraction** — scans tool traces for reusable artifacts. Repeated/complex Bash → `scripts/`, read docs → `references/`, written templates → `assets/`.
@@ -103,6 +109,12 @@ skila serve
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/luyao618/skila/main/docs/images/pipeline.png" alt="Skila distill 流程" width="400" />
+</p>
+
+下图展示了 `/skila` 的实际运行效果 — 从调试会话中提炼新 skill 并更新已有 skill：
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/luyao618/skila/main/docs/images/skill-distill.jpg" alt="Skila skill 提炼实况" width="960" />
 </p>
 
 流程分三个阶段：
