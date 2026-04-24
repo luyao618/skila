@@ -4,6 +4,7 @@
 // POST /api/skills/:name/feedback — manual feedback record
 import { existsSync, statSync, readdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { homedir } from "node:os";
 import { scanInventory, findSkill } from "../../inventory/scanner.js";
 import { validateSkillContent } from "../../validate/validate.js";
 import { atomicWriteFileSync } from "../../storage/atomic.js";
@@ -31,6 +32,7 @@ function skillSummary(s) {
     const skila = s.skila;
     return {
         name: s.name,
+        path: s.path.replace(homedir(), "~"),
         status: s.status,
         version: skila.version || "0.0.0",
         description: s.frontmatter.description ?? "",

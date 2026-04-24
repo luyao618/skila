@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=1280, initial-scale=1" />
     <title>skila — skill inventory controller</title>
     <link rel="stylesheet" href="./vendor/tw.css" />
+    <script src="./vendor/echarts.js"></script>
     <style>
       :root {
         --cm-bg: #0d1117;
@@ -63,6 +64,187 @@
       .view-pill { padding: 2px 10px; font-size: 11px; border-radius: 4px; color: #8b949e; cursor: pointer; }
       .view-pill:hover { color: #e6edf3; }
       .view-pill.active { background: #21262d; color: #e6edf3; }
+
+      /* ===== DASHBOARD DESIGN SYSTEM ===== */
+      :root {
+        --db-bg-primary: #0f172a;
+        --db-bg-card: #1e293b;
+        --db-text-primary: #f8fafc;
+        --db-text-secondary: #94a3b8;
+        --db-accent: #4f6ef7;
+        --db-accent-light: #1e3a5f;
+        --db-border: #334155;
+        --db-success: #4ade80;
+        --db-warning: #fbbf24;
+        --db-danger: #f87171;
+        --db-radius: 10px;
+        --db-shadow-sm: 0 1px 3px rgba(0,0,0,.3);
+        --db-shadow-md: 0 4px 12px rgba(0,0,0,.4);
+        --db-shadow-lg: 0 10px 30px rgba(0,0,0,.5);
+      }
+      [data-theme="light"] {
+        --db-bg-primary: #f4f6f9;
+        --db-bg-card: #ffffff;
+        --db-text-primary: #1e293b;
+        --db-text-secondary: #64748b;
+        --db-accent-light: #e8ecff;
+        --db-border: #e2e8f0;
+        --db-shadow-sm: 0 1px 3px rgba(0,0,0,.06);
+        --db-shadow-md: 0 4px 12px rgba(0,0,0,.08);
+        --db-shadow-lg: 0 10px 30px rgba(0,0,0,.1);
+      }
+      #pane-dashboard {
+        background: var(--db-bg-primary);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        position: relative;
+      }
+      #pane-dashboard::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #818cf8, #4ade80, #fbbf24, #f87171);
+        z-index: 10;
+      }
+      .db-container { max-width: 1400px; margin: 0 auto; padding: 24px 24px 40px; }
+      .db-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+      .db-title { font-size: 24px; font-weight: 700; color: var(--db-text-primary); }
+      .db-subtitle { font-size: 12px; color: var(--db-text-secondary); margin-top: 2px; }
+      .db-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+      .db-kpi-card {
+        background: var(--db-bg-card);
+        border: 1px solid var(--db-border);
+        border-radius: var(--db-radius);
+        padding: 16px 18px;
+        border-left: 4px solid var(--kpi-color, var(--db-accent));
+        box-shadow: var(--db-shadow-sm);
+        transition: all .2s ease;
+      }
+      .db-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(129,140,248,0.15); }
+      .db-kpi-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+      .db-kpi-icon {
+        width: 32px; height: 32px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 14px;
+        background: var(--kpi-color, var(--db-accent));
+      }
+      .db-kpi-label {
+        font-size: 12px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.5px; color: var(--db-text-secondary);
+      }
+      .db-kpi-value { font-size: 28px; font-weight: 700; color: var(--db-text-primary); line-height: 1.2; }
+      .db-kpi-sub { font-size: 12px; font-weight: 600; color: var(--db-text-secondary); margin-top: 4px; }
+      .db-kpi-sparkline { width: 100%; height: 40px; margin-top: 8px; }
+      .db-chart-row { display: flex; gap: 14px; margin-bottom: 20px; }
+      .db-chart-card {
+        background: var(--db-bg-card);
+        border: 1px solid var(--db-border);
+        border-radius: var(--db-radius);
+        padding: 16px 18px;
+        box-shadow: var(--db-shadow-sm);
+      }
+      .db-chart-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+      .db-chart-card h3 {
+        font-size: 14px; font-weight: 600; color: var(--db-text-primary); margin-bottom: 12px;
+      }
+      .db-chart-container { width: 100%; height: 300px; }
+      .db-full-width { width: 100%; margin-bottom: 20px; }
+      /* Table */
+      .db-table-toolbar {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 12px; gap: 12px;
+      }
+      .db-table-toolbar h3 { font-size: 14px; font-weight: 600; color: var(--db-text-primary); margin: 0; }
+      .db-table-search {
+        padding: 6px 12px; border-radius: 6px; border: 1px solid var(--db-border);
+        background: var(--db-bg-primary); color: var(--db-text-primary);
+        font-size: 13px; outline: none; width: 200px;
+      }
+      .db-table-search:focus { border-color: var(--db-accent); }
+      .db-export-btn {
+        padding: 6px 14px; border-radius: 6px; border: 1px solid var(--db-border);
+        background: var(--db-bg-card); color: var(--db-text-secondary);
+        font-size: 12px; font-weight: 600; cursor: pointer;
+      }
+      .db-export-btn:hover { border-color: var(--db-accent); color: var(--db-accent); }
+      .db-data-table { width: 100%; border-collapse: collapse; }
+      .db-data-table th {
+        font-size: 11px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.5px; color: var(--db-text-secondary);
+        border-bottom: 2px solid var(--db-border); padding: 8px 12px;
+        cursor: pointer; text-align: left; white-space: nowrap;
+        user-select: none;
+      }
+      .db-data-table th:hover { color: var(--db-accent); }
+      .db-data-table th .sort-icon { margin-left: 4px; opacity: 0.3; font-size: 10px; }
+      .db-data-table th.sorted .sort-icon { opacity: 1; color: var(--db-accent); }
+      .db-data-table td {
+        padding: 10px 12px; font-size: 13px; color: var(--db-text-primary);
+        border-bottom: 1px solid var(--db-border);
+      }
+      .db-data-table tbody tr:hover { background: var(--db-accent-light); }
+      .db-data-table .row-danger { background: rgba(248,113,113,0.08); }
+      .db-data-table .row-danger:hover { background: rgba(248,113,113,0.15); }
+      .db-status-badge {
+        display: inline-block; padding: 2px 8px; border-radius: 4px;
+        font-size: 11px; font-weight: 600;
+      }
+      .db-badge-published { background: rgba(74,222,128,0.1); color: #16a34a; }
+      .db-badge-staging { background: rgba(251,191,36,0.1); color: #d97706; }
+      .db-badge-draft { background: rgba(96,165,250,0.1); color: #2563eb; }
+      .db-badge-archived { background: rgba(148,163,184,0.1); color: #64748b; }
+      .db-badge-disabled { background: rgba(71,85,105,0.1); color: #475569; }
+      .db-pagination {
+        display: flex; justify-content: center; align-items: center; gap: 8px;
+        margin-top: 12px; font-size: 13px; color: var(--db-text-secondary);
+      }
+      .db-page-btn {
+        padding: 4px 12px; border-radius: 6px; border: 1px solid var(--db-border);
+        background: var(--db-bg-card); color: var(--db-text-secondary);
+        font-size: 12px; cursor: pointer;
+      }
+      .db-page-btn:hover:not(:disabled) { border-color: var(--db-accent); color: var(--db-accent); }
+      .db-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      /* Theme toggle */
+      .db-theme-toggle {
+        position: fixed; bottom: 24px; right: 24px;
+        width: 44px; height: 44px; border-radius: 50%;
+        background: var(--db-bg-card); box-shadow: var(--db-shadow-md);
+        border: 1px solid var(--db-border);
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; z-index: 1000; font-size: 18px;
+        color: var(--db-text-secondary); transition: all .2s;
+      }
+      .db-theme-toggle:hover { box-shadow: var(--db-shadow-lg); transform: scale(1.05); }
+      /* Skeleton */
+      .db-skeleton {
+        background: linear-gradient(90deg, var(--db-border) 25%, var(--db-bg-primary) 50%, var(--db-border) 75%);
+        background-size: 200% 100%;
+        animation: db-shimmer 1.5s infinite;
+        border-radius: 4px; display: inline-block;
+      }
+      @keyframes db-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+      /* Empty state */
+      .db-empty-state {
+        text-align: center; padding: 60px 20px; color: var(--db-text-secondary);
+      }
+      .db-empty-state i { font-size: 48px; margin-bottom: 16px; display: block; opacity: 0.3; }
+      .db-empty-state p { font-size: 14px; }
+      .db-kpi-icon svg, .db-theme-toggle svg, .db-export-btn svg, .db-empty-state svg { width: 1em; height: 1em; fill: currentColor; }
+      .db-kpi-icon svg { width: 16px; height: 16px; }
+      .db-empty-state svg { width: 48px; height: 48px; display: block; margin: 0 auto 16px; opacity: 0.3; }
+      /* Responsive */
+      @media (max-width: 1024px) {
+        .db-kpi-row { grid-template-columns: repeat(2, 1fr); }
+        .db-chart-row { flex-direction: column; }
+      }
+      @media (max-width: 640px) {
+        .db-kpi-row { grid-template-columns: 1fr; }
+        .db-container { padding: 12px 12px 40px; }
+        .db-kpi-sparkline { display: none; }
+        .db-header { flex-direction: column; align-items: flex-start; }
+        .db-table-search { width: 100%; }
+      }
     </style>
   </head>
   <body class="bg-[#0d1117] text-[#e6edf3] font-sans h-screen overflow-hidden antialiased">
@@ -87,17 +269,85 @@
       </header>
 
       <!-- ─── Dashboard pane ─────────────────────────────────────────────── -->
-      <div id="pane-dashboard" class="pane flex-1 p-6 overflow-y-auto hidden">
-        <h1 class="text-base font-semibold mb-4 text-[#e6edf3]">Dashboard</h1>
-        <div id="dashboard-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"></div>
-        <div id="staging-backlog" class="mb-6 hidden">
-          <h2 class="text-xs uppercase tracking-wider text-[#8b949e] mb-2">Staging Candidates</h2>
-          <ul id="staging-backlog-list" class="space-y-1 text-sm"></ul>
+      <div id="pane-dashboard" class="pane flex-1 overflow-y-auto hidden">
+        <div class="db-container">
+          <div class="db-header">
+            <div>
+              <h1 class="db-title">Dashboard</h1>
+              <div class="db-subtitle" id="db-subtitle">Loading...</div>
+            </div>
+          </div>
+          <!-- KPI Row -->
+          <div class="db-kpi-row" id="db-kpi-row">
+            <div class="db-kpi-card" style="--kpi-color:#818cf8">
+              <div class="db-kpi-header"><div class="db-kpi-icon"><svg viewBox="0 0 512 512"><path d="M32 32v448h448V32zm384 384H96V96h320z"/><rect x="128" y="288" width="64" height="96"/><rect x="224" y="192" width="64" height="192"/><rect x="320" y="128" width="64" height="256"/></svg></div><div class="db-kpi-label">Total Usage</div></div>
+              <div class="db-kpi-value" id="kpi-total-usage"><span class="db-skeleton" style="width:60px;height:28px">&nbsp;</span></div>
+              <div class="db-kpi-sub" id="kpi-total-usage-sub"></div>
+              <div class="db-kpi-sparkline" id="kpi-sparkline-usage"></div>
+            </div>
+            <div class="db-kpi-card" style="--kpi-color:#34d399">
+              <div class="db-kpi-header"><div class="db-kpi-icon"><svg viewBox="0 0 448 512"><path d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288h140.8L152.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5 12.2 8.8 28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3S451.3 224 438 224H297.2z"/></svg></div><div class="db-kpi-label">Active Skills</div></div>
+              <div class="db-kpi-value" id="kpi-active"><span class="db-skeleton" style="width:40px;height:28px">&nbsp;</span></div>
+              <div class="db-kpi-sub" id="kpi-active-sub">last 7 days</div>
+            </div>
+            <div class="db-kpi-card" style="--kpi-color:#fbbf24">
+              <div class="db-kpi-header"><div class="db-kpi-icon"><svg viewBox="0 0 576 512"><path d="M264.5 5.2c14.9-6.9 32.1-6.9 47 0l218.6 101c8.5 3.9 13.9 12.4 13.9 21.8s-5.4 17.9-13.9 21.8l-218.6 101c-14.9 6.9-32.1 6.9-47 0L45.9 149.8C37.4 145.8 32 137.3 32 128s5.4-17.9 13.9-21.8zM45.9 234.6L264.5 338.7c14.9 6.9 32.1 6.9 47 0L530.1 234.6c8.5 3.9 13.9 12.4 13.9 21.8s-5.4 17.9-13.9 21.8l-218.6 101c-14.9 6.9-32.1 6.9-47 0L45.9 278.2C37.4 274.3 32 265.8 32 256.4s5.4-17.9 13.9-21.8zM530.1 362.6c8.5 3.9 13.9 12.4 13.9 21.8s-5.4 17.9-13.9 21.8l-218.6 101c-14.9 6.9-32.1 6.9-47 0L45.9 406.2C37.4 402.2 32 393.7 32 384.4s5.4-17.9 13.9-21.8L264.5 466.7c14.9 6.9 32.1 6.9 47 0z"/></svg></div><div class="db-kpi-label">Total Skills</div></div>
+              <div class="db-kpi-value" id="kpi-total-skills"><span class="db-skeleton" style="width:40px;height:28px">&nbsp;</span></div>
+              <div class="db-kpi-sub" id="kpi-total-skills-sub"></div>
+            </div>
+            <div class="db-kpi-card" style="--kpi-color:#fb7185">
+              <div class="db-kpi-header"><div class="db-kpi-icon"><svg viewBox="0 0 512 512"><path d="M256 0a256 256 0 110 512A256 256 0 01256 0zm-24 120a24 24 0 00-24 24v136a24 24 0 0024 24h80a24 24 0 000-48H256V144a24 24 0 00-24-24z"/></svg></div><div class="db-kpi-label">Last Used</div></div>
+              <div class="db-kpi-value" id="kpi-last-used"><span class="db-skeleton" style="width:80px;height:28px">&nbsp;</span></div>
+              <div class="db-kpi-sub" id="kpi-last-used-sub"></div>
+            </div>
+          </div>
+          <!-- Chart Row 1: Donut + Bar -->
+          <div class="db-chart-row">
+            <div class="db-chart-card" style="flex:1">
+              <h3>Status Distribution</h3>
+              <div class="db-chart-container" id="chart-status-donut"></div>
+            </div>
+            <div class="db-chart-card" style="flex:2">
+              <h3>Top Skills by Usage</h3>
+              <div class="db-chart-container" id="chart-top-skills"></div>
+            </div>
+          </div>
+          <!-- Chart Row 2: Timeline -->
+          <div class="db-full-width">
+            <div class="db-chart-card">
+              <h3>Daily Activity Trend</h3>
+              <div class="db-chart-container" id="chart-timeline" style="height:350px"></div>
+            </div>
+          </div>
+          <!-- Data Table -->
+          <div class="db-full-width">
+            <div class="db-chart-card">
+              <div class="db-table-toolbar">
+                <h3>All Skills</h3>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input type="text" class="db-table-search" id="db-table-search" placeholder="Search skills..." />
+                  <button class="db-export-btn" id="db-export-csv"><svg viewBox="0 0 512 512" style="width:12px;height:12px;fill:currentColor;vertical-align:middle;margin-right:4px"><path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32v242.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64v-32c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352zm368 56a24 24 0 110 48 24 24 0 010-48z"/></svg>Export</button>
+                </div>
+              </div>
+              <table class="db-data-table" id="db-data-table">
+                <thead>
+                  <tr>
+                    <th data-col="name">Name <span class="sort-icon">⇅</span></th>
+                    <th data-col="status">Status <span class="sort-icon">⇅</span></th>
+                    <th data-col="usageCount">Usage <span class="sort-icon">⇅</span></th>
+                    <th data-col="version">Version <span class="sort-icon">⇅</span></th>
+                    <th data-col="lastUsedAt">Last Used <span class="sort-icon">⇅</span></th>
+                    <th data-col="lastImprovedAt">Last Improved <span class="sort-icon">⇅</span></th>
+                  </tr>
+                </thead>
+                <tbody id="db-table-body"></tbody>
+              </table>
+              <div class="db-pagination" id="db-pagination"></div>
+            </div>
+          </div>
         </div>
-        <div id="low-success" class="hidden">
-          <h2 class="text-xs uppercase tracking-wider text-[#8b949e] mb-2">Low Success Rate (&lt;50%)</h2>
-          <ul id="low-success-list" class="space-y-1 text-sm text-[#f85149]"></ul>
-        </div>
+        <!-- Theme toggle -->
+        <button class="db-theme-toggle" id="db-theme-toggle" title="Toggle theme">🌙</button>
       </div>
 
       <!-- ─── Skills pane (three-column) ────────────────────────────────── -->
@@ -439,7 +689,14 @@
         const isMd = activeFilePath === null || isMarkdownFile(activeFilePath);
         subbar.classList.remove("hidden");
         viewMode.classList.toggle("hidden", !isMd);
-        crumb.textContent = activeFilePath === null ? "SKILL.md" : activeFilePath;
+        if (activeFilePath === null) {
+          crumb.textContent = selectedSkill?.path ?? "SKILL.md";
+        } else if (selectedSkill?.path) {
+          const dir = selectedSkill.path.replace(/\/[^/]+$/, "");
+          crumb.textContent = dir + "/" + activeFilePath;
+        } else {
+          crumb.textContent = activeFilePath;
+        }
         // Non-markdown files cannot use Preview — force Raw
         if (!isMd && (activeView === "preview" || activeView === "translate")) {
           activeView = "raw";
@@ -756,10 +1013,7 @@
         document.getElementById("active-skill-name").textContent = name;
         document.getElementById("active-skill-version").textContent = `v${selectedSkill.version}`;
         const descEl = document.getElementById("active-skill-desc");
-        if (selectedSkill.description) {
-          descEl.textContent = selectedSkill.description;
-          descEl.classList.remove("hidden");
-        } else descEl.classList.add("hidden");
+        descEl.classList.add("hidden");
 
         // Staging ring on center pane header
         const nameEl = document.getElementById("active-skill-name");
@@ -971,37 +1225,367 @@
       }
 
       // ── Dashboard ────────────────────────────────────────────────────────
+      const SERIES_COLORS = ['#818cf8','#fbbf24','#34d399','#fb7185','#60a5fa','#a78bfa','#f472b6','#2dd4bf','#fb923c','#22d3ee'];
+      const STATUS_COLORS = { published:'#4ade80', staging:'#fbbf24', draft:'#60a5fa', archived:'#94a3b8', disabled:'#475569' };
+      let dbData = null;
+      let dbTablePage = 1;
+      const DB_PAGE_SIZE = 15;
+      let dbSearchQuery = '';
+      let dbSortState = { column: 'usageCount', direction: -1 };
+      let dbCharts = {};
+
+      function getDbTheme() {
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        return {
+          textColor: isDark ? '#94a3b8' : '#64748b',
+          axisLineColor: isDark ? '#334155' : '#e2e8f0',
+          splitLineColor: isDark ? 'rgba(51,65,85,0.4)' : '#f1f5f9',
+          bg: isDark ? '#1e293b' : '#ffffff',
+        };
+      }
+
+      function animateValue(el, end, formatter, duration = 800) {
+        if (end === 0 || end == null) { el.textContent = formatter(end ?? 0); return; }
+        const startTime = performance.now();
+        function step(ts) {
+          const progress = Math.min((ts - startTime) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          el.textContent = formatter(Math.round(end * eased));
+          if (progress < 1) requestAnimationFrame(step);
+          else el.textContent = formatter(end);
+        }
+        requestAnimationFrame(step);
+      }
+
+      function fmtNum(v) { return v == null ? '—' : v.toLocaleString(); }
+      function fmtPct(v) { return v == null ? '—' : Math.round(v * 100) + '%'; }
+
+      function dbStatusBadge(status) {
+        const s = esc(status);
+        const cls = 'db-badge-' + s;
+        return `<span class="db-status-badge ${cls}">${s}</span>`;
+      }
+
       async function loadDashboard() {
         const r = await fetch("/api/dashboard");
         if (!r.ok) return;
-        const d = await r.json();
-        const grid = document.getElementById("dashboard-grid");
-        const cards = [
-          { label: "Published", value: d.counts.published, color: "text-[#3fb950]" },
-          { label: "Staging",   value: d.counts.staging,   color: "text-[#f0b429]" },
-          { label: "Draft",     value: d.counts.draft,     color: "text-[#d29922]" },
-          { label: "Total",     value: d.totalSkills,      color: "text-[#e6edf3]" },
-        ];
-        grid.innerHTML = cards.map(c => `
-          <div class="bg-[#161b22] border border-[#30363d] rounded p-4">
-            <div class="text-2xl font-bold font-mono ${c.color}">${c.value}</div>
-            <div class="text-xs text-[#8b949e] mt-1">${c.label}</div>
-          </div>`).join("");
+        dbData = await r.json();
+        const d = dbData;
 
-        const stagingBacklog = document.getElementById("staging-backlog");
-        if (d.stagingBacklog?.length > 0) {
-          stagingBacklog.classList.remove("hidden");
-          document.getElementById("staging-backlog-list").innerHTML = d.stagingBacklog.map(n =>
-            `<li><button class="text-[#f0b429] hover:underline text-xs" onclick="switchToSkill('${esc(n)}')">${esc(n)}</button></li>`
-          ).join("");
-        }
-        const lowSuccess = document.getElementById("low-success");
-        if (d.lowSuccess?.length > 0) {
-          lowSuccess.classList.remove("hidden");
-          document.getElementById("low-success-list").innerHTML = d.lowSuccess.map(n =>
-            `<li class="text-xs">${esc(n)}</li>`).join("");
-        }
+        // Subtitle
+        document.getElementById('db-subtitle').textContent =
+          `Last updated: ${new Date().toLocaleString()} · ${d.totalSkills} skills · ${d.totalUsage} total invocations`;
+
+        // Theme toggle icon
+        updateThemeIcon();
+
+        renderKPIs(d);
+        renderCharts(d);
+        renderTable(d);
+        renderTimeline(d);
       }
+
+      function renderKPIs(d) {
+        // Total Usage
+        const usageEl = document.getElementById('kpi-total-usage');
+        animateValue(usageEl, d.totalUsage, fmtNum);
+        document.getElementById('kpi-total-usage-sub').textContent = `across ${d.totalSkills} skills`;
+
+        // Active Skills
+        const activeEl = document.getElementById('kpi-active');
+        animateValue(activeEl, d.activeSkills, fmtNum);
+        document.getElementById('kpi-active-sub').textContent =
+          d.totalSkills > 0 ? `${Math.round(d.activeSkills / d.totalSkills * 100)}% of total · invoked in last 7 days` : 'skills invoked in last 7 days';
+
+        // Total Skills
+        const totalEl = document.getElementById('kpi-total-skills');
+        animateValue(totalEl, d.totalSkills, fmtNum);
+        const parts = Object.entries(d.counts).filter(([,v]) => v > 0).map(([k,v]) => `${v} ${k}`);
+        document.getElementById('kpi-total-skills-sub').textContent = parts.join(' · ') || 'no skills';
+
+        // Last Used
+        const lastEl = document.getElementById('kpi-last-used');
+        lastEl.textContent = d.lastUsedAt ? relativeTime(d.lastUsedAt) : 'Never';
+        lastEl.style.fontSize = '22px';
+        if (d.lastUsedAt) {
+          const mostRecent = d.skillStats?.length ? d.skillStats.reduce((a, b) =>
+            (a.lastUsedAt && (!b.lastUsedAt || a.lastUsedAt > b.lastUsedAt)) ? a : b, d.skillStats[0]) : null;
+          document.getElementById('kpi-last-used-sub').textContent = mostRecent?.name ?? '';
+        }
+
+        // Sparkline for usage (mini bar chart using top skills)
+        renderKpiSparkline(d);
+      }
+
+      function renderKpiSparkline(d) {
+        const container = document.getElementById('kpi-sparkline-usage');
+        if (!d.skillStats || d.skillStats.length === 0) { container.innerHTML = ''; return; }
+        if (dbCharts.sparkline) dbCharts.sparkline.dispose();
+        const chart = echarts.init(container);
+        dbCharts.sparkline = chart;
+        const theme = getDbTheme();
+        const sorted = [...d.skillStats].filter(s => s.usageCount > 0).sort((a,b) => b.usageCount - a.usageCount).slice(0, 10);
+        chart.setOption({
+          grid: { left: 0, right: 0, top: 2, bottom: 2 },
+          xAxis: { type: 'category', show: false, data: sorted.map(s => s.name) },
+          yAxis: { type: 'value', show: false },
+          series: [{ type: 'bar', data: sorted.map(s => s.usageCount), itemStyle: { color: '#818cf8', borderRadius: [2,2,0,0] }, barWidth: '60%' }],
+        });
+      }
+
+      function renderCharts(d) {
+        renderStatusDonut(d);
+        renderTopSkillsBar(d);
+      }
+
+      function renderStatusDonut(d) {
+        const container = document.getElementById('chart-status-donut');
+        if (dbCharts.donut) dbCharts.donut.dispose();
+        const chart = echarts.init(container);
+        dbCharts.donut = chart;
+        const theme = getDbTheme();
+        const data = Object.entries(d.counts).filter(([,v]) => v > 0).map(([k,v]) => ({
+          name: k, value: v, itemStyle: { color: STATUS_COLORS[k] || '#94a3b8' }
+        }));
+        if (data.length === 0) {
+          container.innerHTML = '<div class="db-empty-state"><p>📊 No skills yet</p></div>';
+          return;
+        }
+        chart.setOption({
+          tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+          legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { color: theme.textColor, fontSize: 12 } },
+          series: [{
+            type: 'pie', radius: ['40%', '70%'], center: ['40%', '50%'],
+            label: { show: false }, emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+            data,
+          }],
+        });
+      }
+
+      function renderTopSkillsBar(d) {
+        const container = document.getElementById('chart-top-skills');
+        if (dbCharts.topBar) dbCharts.topBar.dispose();
+        const chart = echarts.init(container);
+        dbCharts.topBar = chart;
+        const theme = getDbTheme();
+        const sorted = [...(d.skillStats || [])].filter(s => s.usageCount > 0).sort((a,b) => b.usageCount - a.usageCount).slice(0, 10);
+        if (sorted.length === 0) {
+          container.innerHTML = '<div class="db-empty-state"><p>📊 No usage data yet</p></div>';
+          return;
+        }
+        const names = sorted.map(s => s.name).reverse();
+        const values = sorted.map(s => s.usageCount).reverse();
+        chart.setOption({
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          grid: { left: 120, right: 40, top: 10, bottom: 10 },
+          xAxis: { type: 'value', axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitLineColor } } },
+          yAxis: { type: 'category', data: names, inverse: false, axisLabel: { color: theme.textColor, fontSize: 11 }, axisLine: { lineStyle: { color: theme.axisLineColor } } },
+          series: [{
+            type: 'bar', data: values.map((v, i) => ({ value: v, itemStyle: { color: SERIES_COLORS[i % SERIES_COLORS.length], borderRadius: [0, 4, 4, 0] } })),
+            barWidth: '60%', label: { show: true, position: 'right', color: theme.textColor, fontSize: 11 },
+          }],
+        });
+      }
+
+      async function renderTimeline(d) {
+        const container = document.getElementById('chart-timeline');
+        const dc = d.dailyCreated || {};
+        const du = d.dailyUpdated || {};
+        const di = d.dailyInvoked || {};
+        // Merge all dates
+        const allDates = new Set([...Object.keys(dc), ...Object.keys(du), ...Object.keys(di)]);
+        if (allDates.size === 0) {
+          container.innerHTML = '<div class="db-empty-state"><p>📈 No activity data yet</p></div>';
+          return;
+        }
+        const dates = [...allDates].sort();
+        const createdData = dates.map(d => dc[d] || 0);
+        const updatedData = dates.map(d => du[d] || 0);
+        const invokedData = dates.map(d => di[d] || 0);
+
+        if (dbCharts.timeline) dbCharts.timeline.dispose();
+        const chart = echarts.init(container);
+        dbCharts.timeline = chart;
+        const theme = getDbTheme();
+
+        chart.setOption({
+          tooltip: { trigger: 'axis' },
+          legend: { data: ['Created', 'Updated', 'Invoked'], textStyle: { color: theme.textColor, fontSize: 11 }, top: 0 },
+          grid: { left: 50, right: 30, top: 40, bottom: 60 },
+          dataZoom: [
+            { type: 'inside', start: 0, end: 100 },
+            { type: 'slider', bottom: 5, height: 20, start: 0, end: 100, borderColor: theme.axisLineColor, textStyle: { color: theme.textColor } },
+          ],
+          xAxis: { type: 'category', data: dates, axisLabel: { color: theme.textColor, fontSize: 10 }, axisLine: { lineStyle: { color: theme.axisLineColor } }, boundaryGap: true },
+          yAxis: { type: 'value', minInterval: 1, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitLineColor } } },
+          series: [
+            {
+              name: 'Created', type: 'bar', data: createdData,
+              itemStyle: { color: '#818cf8', borderRadius: [4,4,0,0] }, barGap: '10%',
+            },
+            {
+              name: 'Updated', type: 'bar', data: updatedData,
+              itemStyle: { color: '#fbbf24', borderRadius: [4,4,0,0] }, barGap: '10%',
+            },
+            {
+              name: 'Invoked', type: 'line', data: invokedData, smooth: true,
+              lineStyle: { color: '#4ade80', width: 2.5 }, itemStyle: { color: '#4ade80' },
+              symbol: 'circle', symbolSize: 6,
+              areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(74,222,128,0.25)'},{offset:1,color:'rgba(74,222,128,0.02)'}]) },
+            },
+          ],
+        });
+      }
+
+      /* ===== DASHBOARD TABLE ===== */
+      function getFilteredSkills() {
+        if (!dbData?.skillStats) return [];
+        let arr = [...dbData.skillStats];
+        if (dbSearchQuery) {
+          const q = dbSearchQuery.toLowerCase();
+          arr = arr.filter(s => s.name.toLowerCase().includes(q) || s.status.includes(q));
+        }
+        const statusOrder = { published: 0, staging: 1, draft: 2, archived: 3, disabled: 4 };
+        const col = dbSortState.column;
+        const dir = dbSortState.direction;
+        arr.sort((a, b) => {
+          let va, vb;
+          if (col === 'status') {
+            va = statusOrder[a.status] ?? 9;
+            vb = statusOrder[b.status] ?? 9;
+          } else {
+            va = a[col]; vb = b[col];
+            if (typeof va === 'string') va = va.toLowerCase();
+            if (typeof vb === 'string') vb = vb.toLowerCase();
+          }
+          if (va == null) va = col === 'lastUsedAt' ? '' : 0;
+          if (vb == null) vb = col === 'lastUsedAt' ? '' : 0;
+          if (va < vb) return -1 * dir;
+          if (va > vb) return 1 * dir;
+          // Secondary sort: status priority
+          if (col !== 'status') {
+            const sa = statusOrder[a.status] ?? 9;
+            const sb = statusOrder[b.status] ?? 9;
+            if (sa !== sb) return sa - sb;
+          }
+          return 0;
+        });
+        return arr;
+      }
+
+      function renderTable() {
+        const arr = getFilteredSkills();
+        const tbody = document.getElementById('db-table-body');
+        const totalPages = Math.max(1, Math.ceil(arr.length / DB_PAGE_SIZE));
+        if (dbTablePage > totalPages) dbTablePage = totalPages;
+        const start = (dbTablePage - 1) * DB_PAGE_SIZE;
+        const page = arr.slice(start, start + DB_PAGE_SIZE);
+
+        if (arr.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--db-text-secondary)">No skills found</td></tr>`;
+        } else {
+          tbody.innerHTML = page.map(s => {
+            const rowCls = '';
+            const desc = s.description ? esc(s.description) : '';
+            return `<tr class="${rowCls}">
+              <td style="font-weight:500;cursor:default" title="${desc}">${esc(s.name)}</td>
+              <td>${dbStatusBadge(s.status)}</td>
+              <td style="font-variant-numeric:tabular-nums">${fmtNum(s.usageCount)}</td>
+              <td style="font-family:monospace;font-size:12px">${esc(s.version)}</td>
+              <td>${s.lastUsedAt ? relativeTime(s.lastUsedAt) : '—'}</td>
+              <td>${s.lastImprovedAt ? relativeTime(s.lastImprovedAt) : '—'}</td>
+            </tr>`;
+          }).join('');
+        }
+
+        // Pagination
+        const pagEl = document.getElementById('db-pagination');
+        pagEl.innerHTML = `
+          <button class="db-page-btn" id="db-prev" ${dbTablePage <= 1 ? 'disabled' : ''}>← Prev</button>
+          <span>Page ${dbTablePage} of ${totalPages}</span>
+          <button class="db-page-btn" id="db-next" ${dbTablePage >= totalPages ? 'disabled' : ''}>Next →</button>`;
+        document.getElementById('db-prev')?.addEventListener('click', () => { dbTablePage--; renderTable(); });
+        document.getElementById('db-next')?.addEventListener('click', () => { dbTablePage++; renderTable(); });
+
+        // Update sort indicators
+        document.querySelectorAll('#db-data-table th').forEach(th => {
+          const col = th.dataset.col;
+          th.classList.toggle('sorted', col === dbSortState.column);
+          const icon = th.querySelector('.sort-icon');
+          if (icon) {
+            icon.textContent = col === dbSortState.column
+              ? (dbSortState.direction === 1 ? '↑' : '↓')
+              : '⇅';
+          }
+        });
+      }
+
+      // Table sort
+      document.getElementById('db-data-table')?.querySelector('thead')?.addEventListener('click', e => {
+        const th = e.target.closest('th[data-col]');
+        if (!th) return;
+        const col = th.dataset.col;
+        if (dbSortState.column === col) dbSortState.direction *= -1;
+        else { dbSortState.column = col; dbSortState.direction = col === 'name' || col === 'status' ? 1 : -1; }
+        dbTablePage = 1;
+        renderTable();
+      });
+
+      // Table search
+      document.getElementById('db-table-search')?.addEventListener('input', e => {
+        dbSearchQuery = e.target.value.trim();
+        dbTablePage = 1;
+        renderTable();
+      });
+
+      // CSV export
+      document.getElementById('db-export-csv')?.addEventListener('click', () => {
+        const arr = getFilteredSkills();
+        const csvEsc = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+        const header = 'Name,Status,Usage,Version,Last Used,Last Improved\n';
+        const rows = arr.map(s =>
+          `${csvEsc(s.name)},${csvEsc(s.status)},${s.usageCount},${csvEsc(s.version)},${csvEsc(s.lastUsedAt || '')},${csvEsc(s.lastImprovedAt || '')}`
+        ).join('\n');
+        const blob = new Blob([header + rows], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'skila-skills.csv';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      });
+
+      /* ===== DASHBOARD THEME TOGGLE ===== */
+      function updateThemeIcon() {
+        const btn = document.getElementById('db-theme-toggle');
+        if (!btn) return;
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        btn.textContent = isDark ? '🌙' : '☀️';
+      }
+
+      document.getElementById('db-theme-toggle')?.addEventListener('click', () => {
+        const html = document.documentElement;
+        const isDark = html.getAttribute('data-theme') !== 'light';
+        html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        localStorage.setItem('skila-theme', isDark ? 'light' : 'dark');
+        updateThemeIcon();
+        // Re-render all charts
+        if (dbData) {
+          renderKpiSparkline(dbData);
+          renderCharts(dbData);
+          renderTimeline(dbData);
+        }
+      });
+
+      // Restore saved theme
+      (function() {
+        const saved = localStorage.getItem('skila-theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+      })();
+
+      // Resize charts on window resize
+      window.addEventListener('resize', () => {
+        Object.values(dbCharts).forEach(c => { if (c && !c.isDisposed()) c.resize(); });
+      });
 
       window.switchToSkill = async function(name) {
         switchMainTab("skills");

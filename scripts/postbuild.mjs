@@ -92,6 +92,21 @@ try {
   throw err;
 }
 
+// 2b. esbuild: bundle echarts → dist/web/vendor/echarts.js (IIFE, minified, global 'echarts')
+console.log("[postbuild] esbuild: bundling echarts → dist/web/vendor/echarts.js");
+await build({
+  entryPoints: [join(ROOT, "node_modules", "echarts", "index.js")],
+  bundle: true,
+  format: "iife",
+  globalName: "echarts",
+  target: "esnext",
+  minify: true,
+  outfile: join(VENDOR_DIR, "echarts.js"),
+  logLevel: "info",
+  treeShaking: true,
+  legalComments: "none",
+});
+
 // 3. Copy index.html → dist/web/index.html
 console.log("[postbuild] copying src/web/index.html → dist/web/index.html");
 copyFileSync(join(SRC, "web", "index.html"), join(DIST, "web", "index.html"));
