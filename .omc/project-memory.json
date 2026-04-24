@@ -166,26 +166,32 @@
   "hotPaths": [
     {
       "path": "src/web/index.html",
-      "accessCount": 95,
-      "lastAccessed": 1776962454784,
+      "accessCount": 221,
+      "lastAccessed": 1777021226135,
       "type": "file"
     },
     {
       "path": "src/cli.ts",
-      "accessCount": 22,
-      "lastAccessed": 1776956071058,
+      "accessCount": 34,
+      "lastAccessed": 1777017291409,
       "type": "file"
     },
     {
       "path": "README.md",
-      "accessCount": 12,
-      "lastAccessed": 1776956023691,
+      "accessCount": 15,
+      "lastAccessed": 1777010598276,
       "type": "file"
     },
     {
       "path": "src/config/config.ts",
-      "accessCount": 10,
-      "lastAccessed": 1776957949307,
+      "accessCount": 14,
+      "lastAccessed": 1777020338229,
+      "type": "file"
+    },
+    {
+      "path": "src/types.ts",
+      "accessCount": 11,
+      "lastAccessed": 1777017166354,
       "type": "file"
     },
     {
@@ -210,12 +216,6 @@
       "path": "src/storage/atomic.ts",
       "accessCount": 8,
       "lastAccessed": 1776693175874,
-      "type": "file"
-    },
-    {
-      "path": "src/types.ts",
-      "accessCount": 8,
-      "lastAccessed": 1776956031386,
       "type": "file"
     },
     {
