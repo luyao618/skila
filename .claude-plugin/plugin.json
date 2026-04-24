@@ -1,7 +1,7 @@
 {
   "name": "skila",
   "description": "Self-improving skill inventory controller: /skila distills sessions into versioned skills with feedback-driven evolution and a web control panel.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "luyao618"
   },
