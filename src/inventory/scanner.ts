@@ -1,4 +1,4 @@
-// Inventory scanner: walks 5 status dirs and parses SKILL.md files.
+// Inventory scanner: walks 4 status dirs and parses SKILL.md files.
 
 import { readdirSync, readFileSync, lstatSync, realpathSync, existsSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
@@ -19,7 +19,7 @@ export function getLastScanWarnings(): ScanWarning[] {
   return _lastWarnings;
 }
 
-const ALL_STATUSES: SkillStatus[] = ["draft", "staging", "published", "archived", "disabled"];
+const ALL_STATUSES: SkillStatus[] = ["draft", "staging", "published", "archived"];
 
 export function scanInventory(): Skill[] {
   _lastWarnings = [];

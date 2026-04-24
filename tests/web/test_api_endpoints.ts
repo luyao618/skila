@@ -54,7 +54,6 @@ function setupFixtureEnv(): { home: string; skills: string; cleanup: () => void 
     ["staging-skill",  "staging"],
     ["draft-skill",    "draft"],
     ["archived-skill", "archived"],
-    ["disabled-skill", "disabled"],
   ];
 
   const statusDirMap: Record<string, string> = {
@@ -62,7 +61,6 @@ function setupFixtureEnv(): { home: string; skills: string; cleanup: () => void 
     staging:   join(skills, ".staging-skila"),
     draft:     join(skills, ".draft-skila"),
     archived:  join(skills, ".archived-skila"),
-    disabled:  join(skills, ".disabled-skila"),
   };
 
   for (const [name, status] of statuses) {
@@ -123,7 +121,6 @@ describe("AC14 — GET / and GET /api/skills", () => {
       expect(statuses.has("staging")).toBe(true);
       expect(statuses.has("draft")).toBe(true);
       expect(statuses.has("archived")).toBe(true);
-      expect(statuses.has("disabled")).toBe(true);
     } finally { cleanup(); }
   });
 });
@@ -172,8 +169,7 @@ describe("AC14, AC15 — skill detail + write endpoints", () => {
       expect(d.counts.staging).toBeGreaterThanOrEqual(1);
       expect(d.counts.draft).toBeGreaterThanOrEqual(1);
       expect(d.counts.archived).toBeGreaterThanOrEqual(1);
-      expect(d.counts.disabled).toBeGreaterThanOrEqual(1);
-      expect(d.totalSkills).toBeGreaterThanOrEqual(5);
+      expect(d.totalSkills).toBeGreaterThanOrEqual(4);
     } finally { cleanup(); }
   });
 
@@ -301,33 +297,33 @@ describe("AC14, AC15 — skill detail + write endpoints", () => {
     } finally { cleanup(); }
   });
 
-  it("POST /api/skills/:name/disable (AC15)", async () => {
+  it("POST /api/skills/:name/archive (AC15)", async () => {
     const { home, skills, cleanup } = setupFixtureEnv();
     process.env.SKILA_HOME = home;
     process.env.SKILA_SKILLS_ROOT = skills;
     resetAdapterCacheForTests();
     const { base, token } = await spin(17811);
     try {
-      const r = await fetch(`${base}/api/skills/pub-skill/disable`, {
+      const r = await fetch(`${base}/api/skills/pub-skill/archive`, {
         method: "POST", headers: headers(token),
       });
       expect(r.status).toBe(200);
-      expect(existsSync(join(skills, ".disabled-skila", "pub-skill", "SKILL.md"))).toBe(true);
+      expect(existsSync(join(skills, ".archived-skila", "pub-skill", "SKILL.md"))).toBe(true);
     } finally { cleanup(); }
   });
 
-  it("POST /api/skills/:name/reactivate — disabled → published (AC15)", async () => {
+  it("POST /api/skills/:name/reactivate — archived → published (AC15)", async () => {
     const { home, skills, cleanup } = setupFixtureEnv();
     process.env.SKILA_HOME = home;
     process.env.SKILA_SKILLS_ROOT = skills;
     resetAdapterCacheForTests();
     const { base, token } = await spin(17812);
     try {
-      const r = await fetch(`${base}/api/skills/disabled-skill/reactivate`, {
+      const r = await fetch(`${base}/api/skills/archived-skill/reactivate`, {
         method: "POST", headers: headers(token),
       });
       expect(r.status).toBe(200);
-      expect(existsSync(join(skills, "disabled-skill", "SKILL.md"))).toBe(true);
+      expect(existsSync(join(skills, "archived-skill", "SKILL.md"))).toBe(true);
     } finally { cleanup(); }
   });
 

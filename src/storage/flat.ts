@@ -21,7 +21,7 @@ function skillPath(name: string, status: SkillStatus): string {
 }
 
 function findSkillPathAnyStatus(name: string): { file: string; status: SkillStatus } | undefined {
-  const order: SkillStatus[] = ["draft", "staging", "published", "archived", "disabled"];
+  const order: SkillStatus[] = ["draft", "staging", "published", "archived"];
   for (const s of order) {
     const file = skillPath(name, s);
     if (existsSync(file)) return { file, status: s };

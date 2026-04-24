@@ -10,7 +10,7 @@ import { sidecarPathFor, writeSidecar, normalizeSkila } from "../inventory/sidec
 import { atomicWriteFileSync } from "../storage/atomic.js";
 import type { SkillStatus } from "../types.js";
 
-const ALL_STATUSES: SkillStatus[] = ["draft", "staging", "published", "archived", "disabled"];
+const ALL_STATUSES: SkillStatus[] = ["draft", "staging", "published", "archived"];
 
 export interface MigrateResult {
   migrated: number;

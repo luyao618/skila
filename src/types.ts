@@ -1,6 +1,6 @@
 // Shared TS types for skila Phase 2.
 
-export type SkillStatus = "draft" | "staging" | "published" | "archived" | "disabled";
+export type SkillStatus = "draft" | "staging" | "published" | "archived";
 export type SkilaSource = "skila-distill" | "skila-revise" | "user-edit-via-web" | "skila-rollback";
 
 /**

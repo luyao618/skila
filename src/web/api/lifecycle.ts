@@ -1,4 +1,4 @@
-// POST /api/skills/:name/{promote,graduate,reject,archive,disable,reactivate,rollback}
+// POST /api/skills/:name/{promote,graduate,reject,archive,reactivate,rollback}
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { sendJson } from "../middleware/token.js";
 
@@ -26,10 +26,6 @@ export async function handleLifecycle(
       case "archive": {
         const { runArchive } = await import("../../commands/archive.js");
         sendJson(res, 200, await runArchive(name)); break;
-      }
-      case "disable": {
-        const { runDisable } = await import("../../commands/disable.js");
-        sendJson(res, 200, await runDisable(name)); break;
       }
       case "reactivate": {
         const { runReactivate } = await import("../../commands/reactivate.js");

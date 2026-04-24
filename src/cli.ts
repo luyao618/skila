@@ -17,11 +17,11 @@ export class SkilaError extends Error {
 }
 
 const VALID_OUTCOMES = new Set(["success", "failure", "unknown"]);
-const VALID_STATUSES = new Set(["draft", "staging", "published", "archived", "disabled"]);
+const VALID_STATUSES = new Set(["draft", "staging", "published", "archived"]);
 
 async function dispatch(argv: string[]): Promise<number> {
   if (argv.length === 0 || argv[0] === "-h" || argv[0] === "--help" || argv[0] === "help") {
-    process.stdout.write("skila — self-improving skill inventory controller\n\nCommands: distill, promote, graduate, reject, archive, disable, reactivate, rollback, feedback, lint, inspect, list, mcp, serve, doctor, stats\n");
+    process.stdout.write("skila — self-improving skill inventory controller\n\nCommands: distill, promote, graduate, reject, archive, reactivate, rollback, feedback, lint, inspect, list, mcp, serve, doctor, stats\n");
     return 0;
   }
   if (argv[0] === "-v" || argv[0] === "--version" || argv[0] === "version") {
@@ -64,7 +64,7 @@ async function dispatch(argv: string[]): Promise<number> {
     return 64;
   }
   if (values["status"] !== undefined && !VALID_STATUSES.has(values["status"] as string)) {
-    process.stderr.write(`skila: invalid --status '${values["status"]}' (must be one of: draft, staging, published, archived, disabled)\n`);
+    process.stderr.write(`skila: invalid --status '${values["status"]}' (must be one of: draft, staging, published, archived)\n`);
     return 64;
   }
 
@@ -94,10 +94,6 @@ async function dispatch(argv: string[]): Promise<number> {
     case "archive": {
       const { runArchive } = await import("./commands/archive.js");
       process.stdout.write(JSON.stringify(await runArchive(positionals[0])) + "\n"); return 0;
-    }
-    case "disable": {
-      const { runDisable } = await import("./commands/disable.js");
-      process.stdout.write(JSON.stringify(await runDisable(positionals[0])) + "\n"); return 0;
     }
     case "reactivate": {
       const { runReactivate } = await import("./commands/reactivate.js");

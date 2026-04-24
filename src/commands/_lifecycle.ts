@@ -1,4 +1,4 @@
-// Lifecycle helpers shared by promote/graduate/archive/disable/reactivate/reject.
+// Lifecycle helpers shared by promote/graduate/archive/reactivate/reject.
 // Phase 4: routes writes through StorageAdapter (git or flat). Live tree
 // mirroring is performed by the adapter (or by this module's fallback) so
 // existing Phase 2 contracts are preserved.

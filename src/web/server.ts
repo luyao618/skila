@@ -98,7 +98,7 @@ export async function startServer(opts: ServeOptions = {}): Promise<{ port: numb
   return { port, close, token: serverToken };
 }
 
-const LIFECYCLE_ACTIONS = new Set(["promote", "graduate", "reject", "archive", "disable", "reactivate", "rollback"]);
+const LIFECYCLE_ACTIONS = new Set(["promote", "graduate", "reject", "archive", "reactivate", "rollback"]);
 
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 

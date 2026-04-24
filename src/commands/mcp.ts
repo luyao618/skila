@@ -65,7 +65,7 @@ export function pruneOrphanSmitheryDirs(): string[] {
 const READ_ONLY_COMMANDS = new Set(["inspect", "list", "lint"]);
 const MUTATION_COMMANDS = new Set([
   "distill", "promote", "graduate", "reject", "archive",
-  "disable", "reactivate", "rollback", "feedback"
+  "reactivate", "rollback", "feedback"
 ]);
 
 export interface McpRequest { method: string; params?: any; id?: number | string }
