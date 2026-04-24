@@ -81,7 +81,7 @@ export async function handleTranslateSkill(
 
   const systemPrompt = `You are a professional translator. Translate the following Markdown document to ${langLabel} (${targetLang}). Rules:
 - Preserve ALL Markdown formatting exactly (headings, lists, code blocks, bold, italic, links)
-- Preserve YAML frontmatter block (between --- delimiters) as-is, do NOT translate it
+- Preserve YAML frontmatter block (between --- delimiters) as-is, EXCEPT translate the "description" field value
 - Preserve code blocks and inline code as-is, do NOT translate code
 - Only translate natural language text
 - Output ONLY the translated document, no explanations`;
