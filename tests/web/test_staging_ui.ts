@@ -184,8 +184,11 @@ describe("AC18c — Staging UI + hallucination warning", () => {
     // Status segment buttons for lifecycle transitions
     expect(html).toContain('status-seg-btn');
     expect(html).toContain('statusActionMap');
-    // Graduate and reject actions exist in the action map
-    expect(html).toContain("'staging→published': 'graduate'");
-    expect(html).toContain("'staging→archived': 'reject'");
+    // All transitions use generic move action
+    expect(html).toContain("'staging→published': 'move'");
+    expect(html).toContain("'staging→archived': 'move'");
+    // New vertical button labels
+    expect(html).toContain('>Public</button>');
+    expect(html).toContain('>Archived</button>');
   });
 });

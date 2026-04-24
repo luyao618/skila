@@ -89,7 +89,7 @@ export async function startServer(opts = {}) {
     const close = () => new Promise((r, e) => server.close(err => err ? e(err) : r()));
     return { port, close, token: serverToken };
 }
-const LIFECYCLE_ACTIONS = new Set(["promote", "graduate", "reject", "archive", "reactivate", "rollback"]);
+const LIFECYCLE_ACTIONS = new Set(["promote", "graduate", "reject", "archive", "reactivate", "rollback", "move"]);
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 /**
  * FIX-H17: only loopback Host headers are allowed. The Host comes from the

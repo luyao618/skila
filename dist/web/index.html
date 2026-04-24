@@ -248,27 +248,53 @@
       }
       /* Status segment control */
       .status-seg-btn {
-        background: transparent;
-        border: 1px solid transparent;
-        color: #484f58;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        background: #161b22;
+        border: 1px solid #30363d;
+        color: #8b949e;
         cursor: pointer;
-        font-family: ui-monospace, monospace;
-        font-size: 10px;
-        padding: 2px 6px;
-        border-radius: 4px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 13px;
+        padding: 8px 12px;
+        border-radius: 8px;
         font-weight: 500;
+        transition: all 0.15s ease;
       }
       .status-seg-btn:hover:not(.status-seg-active):not(:disabled) {
-        color: #8b949e;
-        background: #161b22;
+        color: #e6edf3;
+        background: #1c2128;
+        border-color: #484f58;
       }
-      .status-seg-btn:disabled {
+      .status-seg-btn:disabled:not(.status-seg-active) {
+        cursor: default;
+        opacity: 0.35;
+      }
+      .status-seg-btn.status-seg-active:disabled {
         cursor: default;
       }
-      .status-seg-active[data-status="published"] { background: #0d2416; color: #3fb950; }
-      .status-seg-active[data-status="staging"]   { background: #2d1d0e; color: #f0b429; }
-      .status-seg-active[data-status="draft"]     { background: #1c1700; color: #d29922; }
-      .status-seg-active[data-status="archived"]  { background: #161b22; color: #8b949e; }
+      .status-seg-btn .status-dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        flex-shrink: 0;
+        box-shadow: 0 0 4px rgba(255,255,255,0.1);
+      }
+      .status-seg-active {
+        border-color: transparent;
+        font-weight: 600;
+      }
+      .status-seg-active[data-status="published"] { background: #0f2d1a; color: #56d364; border-color: #238636; }
+      .status-seg-active[data-status="published"] .status-dot { background: #56d364; box-shadow: 0 0 8px rgba(86,211,100,0.5); }
+      .status-seg-active[data-status="staging"]   { background: #3a2510; color: #f5c842; border-color: #9e6a03; }
+      .status-seg-active[data-status="staging"] .status-dot { background: #f5c842; box-shadow: 0 0 8px rgba(245,200,66,0.5); }
+      .status-seg-active[data-status="draft"]     { background: #272000; color: #e3b341; border-color: #845e00; }
+      .status-seg-active[data-status="draft"] .status-dot { background: #e3b341; box-shadow: 0 0 8px rgba(227,179,65,0.5); }
+      .status-seg-active[data-status="archived"]  { background: #1c2128; color: #b1bac4; border-color: #484f58; }
+      .status-seg-active[data-status="archived"] .status-dot { background: #b1bac4; box-shadow: 0 0 8px rgba(177,186,196,0.4); }
+      .status-seg-btn:not(.status-seg-active) .status-dot {
+        background: #484f58;
+      }
 
     </style>
   </head>
@@ -285,7 +311,7 @@
             <button id="tab-settings"  class="tab-btn px-3 py-1.5 rounded font-medium" data-tab="settings">Settings</button>
           </nav>
         </div>
-        <div id="status-badges" class="flex items-center gap-2 text-xs text-[#8b949e]" aria-live="polite">
+        <div id="status-badges" class="flex items-center gap-2 text-xs text-[#8b949e] hidden" aria-live="polite">
           <span class="text-[#3fb950]" id="badge-published">🟢 — published</span>
           <span class="text-[#d29922]" id="badge-draft">🟡 — drafts</span>
           <span class="text-[#f0b429]" id="badge-staging">🟠 — staging</span>
@@ -476,11 +502,11 @@
           <!-- STATUS -->
           <section class="p-3 border-b border-[#30363d]" aria-labelledby="status-heading">
             <h2 id="status-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Status</h2>
-            <div id="status-segment" class="flex flex-wrap gap-1">
-              <button class="status-seg-btn" data-status="published">pub</button>
-              <button class="status-seg-btn" data-status="staging">stg</button>
-              <button class="status-seg-btn" data-status="draft">dft</button>
-              <button class="status-seg-btn" data-status="archived">arc</button>
+            <div id="status-segment" class="flex flex-col gap-1.5">
+              <button class="status-seg-btn" data-status="draft"><span class="status-dot"></span>Draft</button>
+              <button class="status-seg-btn" data-status="staging"><span class="status-dot"></span>Staging</button>
+              <button class="status-seg-btn" data-status="published"><span class="status-dot"></span>Public</button>
+              <button class="status-seg-btn" data-status="archived"><span class="status-dot"></span>Archived</button>
             </div>
           </section>
 
@@ -1067,11 +1093,13 @@
         const show = versionsExpanded ? versions : versions.slice(0, VERSIONS_COLLAPSED_COUNT);
         ul.innerHTML = show.map((v, i) => {
           const isCurrent = i === 0;
-          const rollbackBtn = !isCurrent ? `<button class="text-[13px] text-[#8b949e] hover:text-[#388bfd] ml-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Restore v${esc(v.version)}" onclick="doRollback('${encodeURIComponent(v.version)}')">&#8634;</button>` : '';
-          return `<li class="group flex items-center gap-1.5 py-1 ${!isCurrent ? 'hover:bg-[#1c2128] rounded px-1 -mx-1' : 'px-1 -mx-1'}">
+          const idx = versions.length - (versionsExpanded ? i : i);
+          const label = `v${esc(v.version)}`;
+          const rollbackBtn = !isCurrent ? `<button class="text-[12px] text-[#484f58] hover:text-[#388bfd] hover:bg-[#1c2128] rounded px-1 py-0.5 cursor-pointer transition-colors" title="Restore ${label}" onclick="doRollback('${encodeURIComponent(v.version)}')">↺</button>` : '';
+          return `<li class="flex items-center gap-1.5 py-1 ${!isCurrent ? 'hover:bg-[#1c2128] rounded px-1 -mx-1' : 'px-1 -mx-1'}">
             <span class="text-[8px] ${isCurrent ? "text-[#388bfd]" : "text-[#30363d]"}">▸</span>
             <button class="font-mono text-[13px] ${isCurrent ? "text-[#388bfd] font-semibold" : "text-[#c9d1d9] hover:text-[#e6edf3]"}"
-              onclick="viewVersion('${encodeURIComponent(v.version)}')">${esc(v.version)}${isCurrent ? " (current)" : ""}</button>
+              onclick="viewVersion('${encodeURIComponent(v.version)}')">${label}${isCurrent ? " (current)" : ""}</button>
             <span class="text-[#6e7681] text-[11px] ml-auto">${relativeTime(v.date)}</span>
             ${rollbackBtn}
           </li>`;
@@ -1124,12 +1152,18 @@
       }
 
       const statusActionMap = {
-        'draft→published': 'promote',
-        'draft→archived': 'archive',
-        'staging→published': 'graduate',
-        'staging→archived': 'reject',
-        'published→archived': 'archive',
-        'archived→published': 'reactivate',
+        'draft→staging': 'move',
+        'draft→published': 'move',
+        'draft→archived': 'move',
+        'staging→draft': 'move',
+        'staging→published': 'move',
+        'staging→archived': 'move',
+        'published→draft': 'move',
+        'published→staging': 'move',
+        'published→archived': 'move',
+        'archived→draft': 'move',
+        'archived→staging': 'move',
+        'archived→published': 'move',
       };
 
       function renderStatus(skill) {
@@ -1225,7 +1259,10 @@
         const action = statusActionMap[key];
         if (!action) { alert(`Cannot transition from ${current} to ${newStatus}`); return; }
         if (!confirm(`Change status to "${newStatus}"?`)) return;
-        const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/${action}`, { method: "POST" });
+        const url = action === 'move'
+          ? `/api/skills/${encodeURIComponent(selectedName)}/${action}?to=${newStatus}`
+          : `/api/skills/${encodeURIComponent(selectedName)}/${action}`;
+        const r = await api(url, { method: "POST" });
         const d = await r.json();
         if (!r.ok) { alert(`Failed: ${d.error}`); return; }
         await loadSkills();
