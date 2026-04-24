@@ -942,6 +942,7 @@
               }
             }),
             keymap.of([{ key: "Mod-s", run: () => { doSave(); return true; } }]),
+            EditorView.lineWrapping,
           ]
         });
         cmView = new EditorView({ state, parent: host });
