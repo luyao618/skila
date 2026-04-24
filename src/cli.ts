@@ -3,7 +3,8 @@
 
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
-import { realpathSync } from "node:fs";
+import { realpathSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 // Custom error class for user-facing errors (FIX-H20)
 export class SkilaError extends Error {
@@ -24,7 +25,9 @@ async function dispatch(argv: string[]): Promise<number> {
     return 0;
   }
   if (argv[0] === "-v" || argv[0] === "--version" || argv[0] === "version") {
-    process.stdout.write("@luyao618/skila 0.0.1\n");
+    const pkgPath = fileURLToPath(new URL("../package.json", import.meta.url));
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+    process.stdout.write(`@luyao618/skila ${pkg.version}\n`);
     return 0;
   }
   const cmd = argv[0];
