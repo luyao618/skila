@@ -3,6 +3,7 @@
 
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
+import { realpathSync } from "node:fs";
 
 // Custom error class for user-facing errors (FIX-H20)
 export class SkilaError extends Error {
@@ -232,10 +233,12 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
 }
 
 // FIX-H19: Detect direct invocation via import.meta.url
+// Resolve symlinks so npm global bin symlinks still match import.meta.url.
 const invokedDirectly = (() => {
   try {
     const argv1 = process.argv[1] ?? "";
-    const fileUrl = pathToFileURL(argv1).href;
+    const resolved = realpathSync(argv1);
+    const fileUrl = pathToFileURL(resolved).href;
     return import.meta.url === fileUrl;
   } catch { return false; }
 })();
