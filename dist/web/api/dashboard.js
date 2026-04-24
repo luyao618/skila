@@ -16,6 +16,59 @@ export async function handleGetDashboard(req, res) {
         .filter(([, e]) => e.successRate < 0.5 && e.usageCount >= 3)
         .map(([name]) => name);
     const stagingBacklog = skills.filter(s => s.status === "staging").map(s => s.name);
+    // Per-skill aggregated stats for dashboard
+    const now = Date.now();
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+    let activeSkills = 0;
+    let globalLastUsedAt = null;
+    const skillStats = skills.map(s => {
+        const fb = feedback[s.name];
+        const usageCount = fb?.usageCount ?? 0;
+        const successRate = fb?.successRate ?? null;
+        const failureCount = fb?.failureCount ?? 0;
+        const lastUsedAt = fb?.lastUsedAt ?? null;
+        if (lastUsedAt && new Date(lastUsedAt).getTime() > sevenDaysAgo) {
+            activeSkills++;
+        }
+        if (lastUsedAt && (!globalLastUsedAt || lastUsedAt > globalLastUsedAt)) {
+            globalLastUsedAt = lastUsedAt;
+        }
+        return {
+            name: s.name,
+            status: s.status,
+            version: s.skila?.version ?? "0.0.0",
+            description: s.frontmatter?.description ?? "",
+            usageCount,
+            successRate,
+            failureCount,
+            lastUsedAt,
+            revisionCount: s.skila?.revisionCount ?? 0,
+            lastImprovedAt: s.skila?.lastImprovedAt ?? null,
+        };
+    });
+    // Daily trend data: created, updated, invoked per day
+    const dailyCreated = {};
+    const dailyUpdated = {};
+    const dailyInvoked = {};
+    for (const s of skills) {
+        const cl = s.skila?.changelog ?? [];
+        for (let i = 0; i < cl.length; i++) {
+            const day = (cl[i].date ?? "").slice(0, 10);
+            if (!day)
+                continue;
+            if (i === 0)
+                dailyCreated[day] = (dailyCreated[day] ?? 0) + 1;
+            else
+                dailyUpdated[day] = (dailyUpdated[day] ?? 0) + 1;
+        }
+    }
+    for (const [, fb] of feedbackEntries) {
+        for (const inv of fb.invocations ?? []) {
+            const day = (inv.ts ?? "").slice(0, 10);
+            if (day)
+                dailyInvoked[day] = (dailyInvoked[day] ?? 0) + 1;
+        }
+    }
     sendJson(res, 200, {
         counts,
         totalSkills: skills.length,
@@ -24,6 +77,12 @@ export async function handleGetDashboard(req, res) {
         lowSuccess,
         stagingBacklog,
         stagingCount: stagingBacklog.length,
+        skillStats,
+        activeSkills,
+        lastUsedAt: globalLastUsedAt,
+        dailyCreated,
+        dailyUpdated,
+        dailyInvoked,
     });
 }
 //# sourceMappingURL=dashboard.js.map
