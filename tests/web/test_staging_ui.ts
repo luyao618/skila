@@ -177,17 +177,15 @@ describe("AC18c — Staging UI + hallucination warning", () => {
     expect(html).toContain("hallucination.proposed");
   });
 
-  it("index.html contains graduate and reject button elements (AC18c DOM assertion)", async () => {
+  it("index.html contains status segment buttons for lifecycle transitions (AC18c DOM assertion)", async () => {
     const { readFileSync } = await import("node:fs");
     const { join: joinPath } = await import("node:path");
     const html = readFileSync(joinPath(process.cwd(), "dist", "web", "index.html"), "utf8");
-    // Graduate button
-    expect(html).toContain('data-action="graduate"');
-    expect(html).toContain("Graduate");
-    // Reject button
-    expect(html).toContain('data-action="reject"');
-    expect(html).toContain("Reject");
-    // Staging actions container
-    expect(html).toContain("staging-actions");
+    // Status segment buttons for lifecycle transitions
+    expect(html).toContain('status-seg-btn');
+    expect(html).toContain('statusActionMap');
+    // Graduate and reject actions exist in the action map
+    expect(html).toContain("'staging→published': 'graduate'");
+    expect(html).toContain("'staging→archived': 'reject'");
   });
 });
