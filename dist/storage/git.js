@@ -58,7 +58,7 @@ function liveSkillPath(name, status) {
     return join(statusDir(status), name, "SKILL.md");
 }
 function findLiveStatus(name) {
-    const order = ["draft", "staging", "published", "archived", "disabled"];
+    const order = ["draft", "staging", "published", "archived"];
     for (const s of order) {
         if (existsSync(liveSkillPath(name, s)))
             return s;
@@ -232,7 +232,7 @@ export class GitBackedStorage {
         // Support both new tag format [skill=<name> v<version>] and legacy [v<version>].
         const newTag = `[skill=${name} v${version}]`;
         const legacyTag = `[v${version}]`;
-        for (const s of ["published", "staging", "draft", "archived", "disabled"]) {
+        for (const s of ["published", "staging", "draft", "archived"]) {
             const rel = repoRelPath(name, s);
             let log;
             try {
@@ -264,7 +264,7 @@ export class GitBackedStorage {
         // Collect commits touching any status path for this skill.
         const out = [];
         const seen = new Set();
-        for (const s of ["published", "staging", "draft", "archived", "disabled"]) {
+        for (const s of ["published", "staging", "draft", "archived"]) {
             const rel = repoRelPath(name, s);
             let r;
             try {
@@ -342,7 +342,7 @@ export class GitBackedStorage {
             throw new StorageAdapterError("E_NOT_FOUND", `git diff: cannot resolve v${from}..v${to}`);
         // Diff over all status paths.
         const parts = [];
-        for (const s of ["published", "staging", "draft", "archived", "disabled"]) {
+        for (const s of ["published", "staging", "draft", "archived"]) {
             const rel = repoRelPath(name, s);
             try {
                 const r = await git(["diff", a, b, "--", rel], this.home);

@@ -1,5 +1,5 @@
 // YAML frontmatter parser/serializer.
-// Round-trip preserves key order. Status enum: 5 values.
+// Round-trip preserves key order. Status enum: 4 values.
 //
 // NOTE (sidecar refactor): SKILL.md no longer stores `skila:` bookkeeping —
 // that lives in a sidecar `.skila.json`. The parser still tolerates a legacy
@@ -9,7 +9,7 @@
 import type { SkillFrontmatter, SkillStatus, SkilaMetadata } from "../types.js";
 import { normalizeSkila } from "./sidecar.js";
 
-const STATUS_VALUES: SkillStatus[] = ["draft", "staging", "published", "archived", "disabled"];
+const STATUS_VALUES: SkillStatus[] = ["draft", "staging", "published", "archived"];
 const NAME_REGEX = /^[a-z0-9][a-z0-9._-]*$/;
 
 export interface ParsedFrontmatter {

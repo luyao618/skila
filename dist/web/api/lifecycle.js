@@ -1,4 +1,5 @@
 import { sendJson } from "../middleware/token.js";
+const VALID_STATUSES = new Set(["draft", "staging", "published", "archived"]);
 export async function handleLifecycle(req, res, name, action, query) {
     try {
         switch (action) {
@@ -22,11 +23,6 @@ export async function handleLifecycle(req, res, name, action, query) {
                 sendJson(res, 200, await runArchive(name));
                 break;
             }
-            case "disable": {
-                const { runDisable } = await import("../../commands/disable.js");
-                sendJson(res, 200, await runDisable(name));
-                break;
-            }
             case "reactivate": {
                 const { runReactivate } = await import("../../commands/reactivate.js");
                 sendJson(res, 200, await runReactivate(name));
@@ -40,6 +36,27 @@ export async function handleLifecycle(req, res, name, action, query) {
                     return;
                 }
                 sendJson(res, 200, await runRollback(name, to));
+                break;
+            }
+            case "move": {
+                const to = query.get("to") ?? "";
+                if (!to || !VALID_STATUSES.has(to)) {
+                    sendJson(res, 400, { error: "move requires ?to=draft|staging|published|archived" });
+                    return;
+                }
+                const { findSkill } = await import("../../inventory/scanner.js");
+                const { moveSkillDir } = await import("../../commands/_lifecycle.js");
+                const skill = findSkill(name);
+                if (!skill) {
+                    sendJson(res, 404, { error: `skill not found: ${name}` });
+                    return;
+                }
+                if (skill.status === to) {
+                    sendJson(res, 200, { destination: skill.path, noop: true });
+                    return;
+                }
+                const destination = await moveSkillDir(skill, to);
+                sendJson(res, 200, { destination });
                 break;
             }
             default:

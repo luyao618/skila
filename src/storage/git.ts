@@ -67,7 +67,7 @@ function liveSkillPath(name: string, status: SkillStatus): string {
 }
 
 function findLiveStatus(name: string): SkillStatus | undefined {
-  const order: SkillStatus[] = ["draft", "staging", "published", "archived", "disabled"];
+  const order: SkillStatus[] = ["draft", "staging", "published", "archived"];
   for (const s of order) {
     if (existsSync(liveSkillPath(name, s))) return s;
   }
@@ -241,7 +241,7 @@ export class GitBackedStorage implements StorageAdapter {
     const newTag = `[skill=${name} v${version}]`;
     const legacyTag = `[v${version}]`;
 
-    for (const s of ["published", "staging", "draft", "archived", "disabled"] as SkillStatus[]) {
+    for (const s of ["published", "staging", "draft", "archived"] as SkillStatus[]) {
       const rel = repoRelPath(name, s);
       let log;
       try {
@@ -269,7 +269,7 @@ export class GitBackedStorage implements StorageAdapter {
     // Collect commits touching any status path for this skill.
     const out: VersionRecord[] = [];
     const seen = new Set<string>();
-    for (const s of ["published", "staging", "draft", "archived", "disabled"] as SkillStatus[]) {
+    for (const s of ["published", "staging", "draft", "archived"] as SkillStatus[]) {
       const rel = repoRelPath(name, s);
       let r;
       try {
@@ -343,7 +343,7 @@ export class GitBackedStorage implements StorageAdapter {
     if (!a || !b) throw new StorageAdapterError("E_NOT_FOUND", `git diff: cannot resolve v${from}..v${to}`);
     // Diff over all status paths.
     const parts: string[] = [];
-    for (const s of ["published", "staging", "draft", "archived", "disabled"] as SkillStatus[]) {
+    for (const s of ["published", "staging", "draft", "archived"] as SkillStatus[]) {
       const rel = repoRelPath(name, s);
       try {
         const r = await git(["diff", a, b, "--", rel], this.home);

@@ -174,7 +174,7 @@ describe("FIX-H17 — Host + Origin validation", () => {
     const env = setupEnv();
     try {
       const { base, token } = await spin(17921);
-      const r = await fetch(`${base}/api/skills/test-skill/disable`, {
+      const r = await fetch(`${base}/api/skills/test-skill/archive`, {
         method: "POST",
         headers: { "x-skila-token": token, "Origin": "http://evil.example" },
       });
@@ -186,7 +186,7 @@ describe("FIX-H17 — Host + Origin validation", () => {
     const env = setupEnv();
     try {
       const { base, token } = await spin(17922);
-      const r = await fetch(`${base}/api/skills/test-skill/disable`, {
+      const r = await fetch(`${base}/api/skills/test-skill/archive`, {
         method: "POST",
         headers: { "x-skila-token": token, "Origin": `http://127.0.0.1:${new URL(base).port}` },
       });

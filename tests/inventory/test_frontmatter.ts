@@ -69,7 +69,7 @@ describe("FIX-H10: Frontmatter serializer round-trip", () => {
   }
 
   it("round-trips 200 random frontmatters via serialize→js-yaml.load", () => {
-    const statuses = ["draft", "staging", "published", "archived", "disabled"] as const;
+    const statuses = ["draft", "staging", "published", "archived"] as const;
     for (let seed = 0; seed < 200; seed++) {
       const name = randName(seed);
       const version = `${(seed % 5) + 1}.${seed % 10}.${seed % 3}`;

@@ -69,7 +69,7 @@ export function pruneOrphanSmitheryDirs() {
 const READ_ONLY_COMMANDS = new Set(["inspect", "list", "lint"]);
 const MUTATION_COMMANDS = new Set([
     "distill", "promote", "graduate", "reject", "archive",
-    "disable", "reactivate", "rollback", "feedback"
+    "reactivate", "rollback", "feedback"
 ]);
 export async function handleMcpRequest(req) {
     const cmd = (req.method ?? "").replace(/^skila\./, "");

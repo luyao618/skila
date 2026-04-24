@@ -14,7 +14,7 @@ import { resetAdapterCacheForTests } from "../../src/storage/index.js";
 import { runDistill } from "../../src/commands/distill.js";
 import { runPromote } from "../../src/commands/promote.js";
 import { runGraduate } from "../../src/commands/graduate.js";
-import { runDisable } from "../../src/commands/disable.js";
+import { runArchive } from "../../src/commands/archive.js";
 import { runReactivate } from "../../src/commands/reactivate.js";
 import { runRollback } from "../../src/commands/rollback.js";
 import { runFeedback } from "../../src/commands/feedback.js";
@@ -248,14 +248,12 @@ describe.each([
       expect(parsed8.body.trim()).toBe(v1parsed.body.trim());
 
       // ----------------------------------------------------------
-      // Step 9: disable → .disabled-skila/
+      // Step 9: archive → .archived-skila/
       // ----------------------------------------------------------
-      await runDisable(SKILL_NAME);
-      const disabledSkill = findSkill(SKILL_NAME);
-      expect(disabledSkill?.status).toBe("disabled");
-      expect(disabledSkill!.path).toMatch(/\.disabled-skila\/azure-pipeline-debug\/SKILL\.md$/);
-      // CC loader would skip because dir starts with '.'
-      expect(disabledSkill!.path).toContain("/.disabled-skila/");
+      await runArchive(SKILL_NAME);
+      const archivedSkill2 = findSkill(SKILL_NAME);
+      expect(archivedSkill2?.status).toBe("archived");
+      expect(archivedSkill2!.path).toMatch(/\.archived-skila\/azure-pipeline-debug\/SKILL\.md$/);
 
       // ----------------------------------------------------------
       // Step 10: reactivate → published; teardown checks no orphans

@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=1280, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23818cf8'/%3E%3Cstop offset='50%25' stop-color='%2334d399'/%3E%3Cstop offset='100%25' stop-color='%23fbbf24'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='46' font-family='system-ui,sans-serif' font-size='36' font-weight='700' fill='white' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E" />
     <title>skila — skill inventory controller</title>
     <link rel="stylesheet" href="./vendor/tw.css" />
     <script src="./vendor/echarts.js"></script>
@@ -193,7 +194,8 @@
       .db-badge-staging { background: rgba(251,191,36,0.1); color: #d97706; }
       .db-badge-draft { background: rgba(96,165,250,0.1); color: #2563eb; }
       .db-badge-archived { background: rgba(148,163,184,0.1); color: #64748b; }
-      .db-badge-disabled { background: rgba(71,85,105,0.1); color: #475569; }
+
+
       .db-pagination {
         display: flex; justify-content: center; align-items: center; gap: 8px;
         margin-top: 12px; font-size: 13px; color: var(--db-text-secondary);
@@ -245,6 +247,56 @@
         .db-header { flex-direction: column; align-items: flex-start; }
         .db-table-search { width: 100%; }
       }
+      /* Status segment control */
+      .status-seg-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        background: #161b22;
+        border: 1px solid #30363d;
+        color: #8b949e;
+        cursor: pointer;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 13px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.15s ease;
+      }
+      .status-seg-btn:hover:not(.status-seg-active):not(:disabled) {
+        color: #e6edf3;
+        background: #1c2128;
+        border-color: #484f58;
+      }
+      .status-seg-btn:disabled:not(.status-seg-active) {
+        cursor: default;
+        opacity: 0.35;
+      }
+      .status-seg-btn.status-seg-active:disabled {
+        cursor: default;
+      }
+      .status-seg-btn .status-dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        flex-shrink: 0;
+        box-shadow: 0 0 4px rgba(255,255,255,0.1);
+      }
+      .status-seg-active {
+        border-color: transparent;
+        font-weight: 600;
+      }
+      .status-seg-active[data-status="published"] { background: #0f2d1a; color: #56d364; border-color: #238636; }
+      .status-seg-active[data-status="published"] .status-dot { background: #56d364; box-shadow: 0 0 8px rgba(86,211,100,0.5); }
+      .status-seg-active[data-status="staging"]   { background: #3a2510; color: #f5c842; border-color: #9e6a03; }
+      .status-seg-active[data-status="staging"] .status-dot { background: #f5c842; box-shadow: 0 0 8px rgba(245,200,66,0.5); }
+      .status-seg-active[data-status="draft"]     { background: #272000; color: #e3b341; border-color: #845e00; }
+      .status-seg-active[data-status="draft"] .status-dot { background: #e3b341; box-shadow: 0 0 8px rgba(227,179,65,0.5); }
+      .status-seg-active[data-status="archived"]  { background: #1c2128; color: #b1bac4; border-color: #484f58; }
+      .status-seg-active[data-status="archived"] .status-dot { background: #b1bac4; box-shadow: 0 0 8px rgba(177,186,196,0.4); }
+      .status-seg-btn:not(.status-seg-active) .status-dot {
+        background: #484f58;
+      }
+
     </style>
   </head>
   <body class="bg-[#0d1117] text-[#e6edf3] font-sans h-screen overflow-hidden antialiased">
@@ -260,7 +312,7 @@
             <button id="tab-settings"  class="tab-btn px-3 py-1.5 rounded font-medium" data-tab="settings">Settings</button>
           </nav>
         </div>
-        <div id="status-badges" class="flex items-center gap-2 text-xs text-[#8b949e]" aria-live="polite">
+        <div id="status-badges" class="flex items-center gap-2 text-xs text-[#8b949e] hidden" aria-live="polite">
           <span class="text-[#3fb950]" id="badge-published">🟢 — published</span>
           <span class="text-[#d29922]" id="badge-draft">🟡 — drafts</span>
           <span class="text-[#f0b429]" id="badge-staging">🟠 — staging</span>
@@ -375,10 +427,6 @@
                 <input type="checkbox" class="filter-cb accent-[#388bfd]" data-status="archived" />
                 <span class="flex-1">archived</span><span id="fc-archived" class="text-[#8b949e]">0</span>
               </label></li>
-              <li><label class="flex items-center gap-2 cursor-pointer text-[#e6edf3] hover:text-white py-0.5">
-                <input type="checkbox" class="filter-cb accent-[#388bfd]" data-status="disabled" />
-                <span class="flex-1">disabled</span><span id="fc-disabled" class="text-[#8b949e]">0</span>
-              </label></li>
             </ul>
           </section>
           <!-- Search -->
@@ -452,55 +500,37 @@
         <!-- RIGHT: Inspector -->
         <aside aria-label="Skill inspector" class="border-l border-[#30363d] flex flex-col min-h-0 overflow-y-auto bg-[#161b22]">
 
+          <!-- STATUS -->
+          <section class="p-3 border-b border-[#30363d]" aria-labelledby="status-heading">
+            <h2 id="status-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Status</h2>
+            <div id="status-segment" class="flex flex-col gap-1.5">
+              <button class="status-seg-btn" data-status="draft"><span class="status-dot"></span>Draft</button>
+              <button class="status-seg-btn" data-status="staging"><span class="status-dot"></span>Staging</button>
+              <button class="status-seg-btn" data-status="published"><span class="status-dot"></span>Public</button>
+              <button class="status-seg-btn" data-status="archived"><span class="status-dot"></span>Archived</button>
+            </div>
+          </section>
+
+          <!-- INFO -->
+          <section class="p-3 border-b border-[#30363d]" aria-labelledby="info-heading">
+            <h2 id="info-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Info</h2>
+            <dl class="space-y-1 text-xs">
+              <div class="flex justify-between"><dt class="text-[#8b949e]">Usage count</dt><dd id="info-usage" class="font-mono text-[#e6edf3]">—</dd></div>
+              <div class="flex justify-between"><dt class="text-[#8b949e]">Last used</dt><dd id="info-last-used" class="font-mono text-[#e6edf3]">—</dd></div>
+              <div class="flex justify-between"><dt class="text-[#8b949e]">Last updated</dt><dd id="info-last-updated" class="font-mono text-[#e6edf3]">—</dd></div>
+              <div class="flex justify-between"><dt class="text-[#8b949e]">Created</dt><dd id="info-created" class="font-mono text-[#e6edf3]">—</dd></div>
+              <div class="flex justify-between"><dt class="text-[#8b949e]">Source</dt><dd id="info-source" class="font-mono text-[#8b949e]">—</dd></div>
+              <div class="flex justify-between"><dt class="text-[#8b949e]">Revisions</dt><dd id="info-revisions" class="font-mono text-[#e6edf3]">—</dd></div>
+            </dl>
+          </section>
+
           <!-- VERSIONS -->
-          <section class="p-3 border-b border-[#30363d]" aria-labelledby="versions-heading">
+          <section class="p-3" aria-labelledby="versions-heading">
             <h2 id="versions-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Versions</h2>
             <ul id="versions-list" class="space-y-1 text-xs text-[#8b949e]">
               <li class="italic text-[#484f58]">no skill selected</li>
             </ul>
-          </section>
-
-          <!-- FEEDBACK -->
-          <section class="p-3 border-b border-[#30363d]" aria-labelledby="feedback-heading">
-            <h2 id="feedback-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Feedback</h2>
-            <div id="feedback-sparkline-wrap" class="mb-2 hidden">
-              <svg id="feedback-sparkline" class="sparkline" width="80" height="20" aria-label="Success rate sparkline"></svg>
-            </div>
-            <dl class="space-y-0.5 text-xs">
-              <div class="flex justify-between"><dt class="text-[#8b949e]">Success rate</dt><dd id="fb-rate" class="font-mono text-[#3fb950]">—</dd></div>
-              <div class="flex justify-between"><dt class="text-[#8b949e]">Usage count</dt><dd id="fb-count" class="font-mono text-[#e6edf3]">—</dd></div>
-              <div class="flex justify-between"><dt class="text-[#8b949e]">Last used</dt><dd id="fb-last" class="font-mono text-[#e6edf3]">—</dd></div>
-            </dl>
-          </section>
-
-          <!-- ACTIONS -->
-          <section class="p-3 border-b border-[#30363d]" aria-labelledby="actions-heading">
-            <h2 id="actions-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Actions</h2>
-            <div id="actions-panel" class="space-y-1.5 text-xs">
-              <!-- Staging-specific prominent actions (shown when status=staging) -->
-              <div id="staging-actions" class="hidden space-y-1.5">
-                <button id="btn-graduate" class="w-full px-3 py-2 rounded bg-[#b08800] hover:bg-[#d4a017] text-white font-semibold text-xs" data-action="graduate">✓ Graduate to Published</button>
-                <button id="btn-reject"   class="w-full px-3 py-2 rounded bg-[#b91c1c] hover:bg-[#dc2626] text-white font-semibold text-xs" data-action="reject">✗ Reject to Archive</button>
-              </div>
-              <!-- Standard actions -->
-              <button id="btn-promote"    class="action-btn w-full px-3 py-1.5 rounded border border-[#30363d] hover:border-[#388bfd] text-[#e6edf3] text-left hidden" data-action="promote">Promote draft → published</button>
-              <button id="btn-rollback"   class="action-btn w-full px-3 py-1.5 rounded border border-[#30363d] hover:border-[#8b949e] text-[#e6edf3] text-left hidden" data-action="rollback">Rollback to v0.X…</button>
-              <button id="btn-disable"    class="action-btn w-full px-3 py-1.5 rounded border border-[#30363d] hover:border-[#f85149] text-[#e6edf3] text-left hidden" data-action="disable">Disable</button>
-              <button id="btn-archive"    class="action-btn w-full px-3 py-1.5 rounded border border-[#30363d] hover:border-[#8b949e] text-[#e6edf3] text-left hidden" data-action="archive">Archive</button>
-              <button id="btn-reactivate" class="action-btn w-full px-3 py-1.5 rounded border border-[#30363d] hover:border-[#3fb950] text-[#e6edf3] text-left hidden" data-action="reactivate">Reactivate</button>
-              <p id="no-actions" class="text-[#484f58] italic">No skill selected</p>
-            </div>
-          </section>
-
-          <!-- DETAILS -->
-          <section class="p-3" aria-labelledby="details-heading">
-            <h2 id="details-heading" class="text-[10px] uppercase tracking-wider text-[#8b949e] mb-2 font-medium">Details</h2>
-            <dl id="details-panel" class="space-y-0.5 text-xs">
-              <div class="flex justify-between"><dt class="text-[#8b949e]">status</dt><dd id="det-status" class="font-mono">—</dd></div>
-              <div class="flex justify-between"><dt class="text-[#8b949e]">source</dt><dd id="det-source" class="font-mono text-[#8b949e]">—</dd></div>
-              <div class="flex justify-between"><dt class="text-[#8b949e]">parentVersion</dt><dd id="det-parent" class="font-mono text-[#8b949e]">—</dd></div>
-              <div class="flex justify-between"><dt class="text-[#8b949e]">revisionCount</dt><dd id="det-revisions" class="font-mono text-[#e6edf3]">—</dd></div>
-            </dl>
+            <button id="versions-toggle" class="hidden text-[10px] text-[#388bfd] hover:text-[#58a6ff] mt-1 cursor-pointer">Show all</button>
           </section>
         </aside>
       </div>
@@ -624,7 +654,7 @@
                       staging:   { cls: "text-[#f0b429] bg-[#2d1d0e]", label: "stg" },
                       draft:     { cls: "text-[#d29922] bg-[#1c1700]", label: "dft" },
                       archived:  { cls: "text-[#8b949e] bg-[#161b22]", label: "arc" },
-                      disabled:  { cls: "text-[#484f58] bg-[#161b22]", label: "dis" } };
+                      };
         const { cls, label } = map[status] ?? { cls: "text-[#8b949e]", label: status };
         return `<span class="inline-block px-1 py-0.5 rounded text-[9px] font-mono font-medium ${cls}">${esc(label)}</span>`;
       }
@@ -952,7 +982,7 @@
         const filtered = skills.filter(s => filters.has(s.status) && (!q || s.name.includes(q) || s.description?.toLowerCase().includes(q)));
 
         // Update filter counts
-        const counts = { published: 0, staging: 0, draft: 0, archived: 0, disabled: 0 };
+        const counts = { published: 0, staging: 0, draft: 0, archived: 0 };
         skills.forEach(s => { counts[s.status] = (counts[s.status] ?? 0) + 1; });
         Object.entries(counts).forEach(([st, n]) => {
           const el = document.getElementById(`fc-${st}`);
@@ -971,7 +1001,7 @@
           return;
         }
         // Group by status
-        const order = ["staging", "published", "draft", "archived", "disabled"];
+        const order = ["staging", "published", "draft", "archived"];
         const grouped = {};
         for (const s of filtered) { (grouped[s.status] ??= []).push(s); }
         let html = "";
@@ -1033,30 +1063,69 @@
         loadEditorContent(selectedSkill);
 
         // Load versions and feedback in parallel
-        loadVersions(name);
+        loadVersions(name).then(() => {
+          renderInfo(selectedSkill);
+          renderActions(selectedSkill);
+        });
         loadFeedback(name);
-        renderActions(selectedSkill);
-        renderDetails(selectedSkill);
+        renderStatus(selectedSkill);
       }
+
+      const VERSIONS_COLLAPSED_COUNT = 5;
+      let versionsExpanded = false;
 
       async function loadVersions(name) {
         const r = await api(`/api/skills/${encodeURIComponent(name)}/versions`);
         versions = r.ok ? await r.json() : [];
         const ul = document.getElementById("versions-list");
+        const toggle = document.getElementById("versions-toggle");
         if (versions.length === 0) {
           ul.innerHTML = `<li class="text-[#484f58] italic">no versions recorded</li>`;
+          toggle.classList.add("hidden");
           return;
         }
-        ul.innerHTML = versions.map((v, i) => {
+        versionsExpanded = false;
+        renderVersionsList();
+      }
+
+      function renderVersionsList() {
+        const ul = document.getElementById("versions-list");
+        const toggle = document.getElementById("versions-toggle");
+        const show = versionsExpanded ? versions : versions.slice(0, VERSIONS_COLLAPSED_COUNT);
+        ul.innerHTML = show.map((v, i) => {
           const isCurrent = i === 0;
-          return `<li class="flex items-center gap-1.5 py-0.5">
+          const idx = versions.length - (versionsExpanded ? i : i);
+          const label = `v${esc(v.version)}`;
+          const rollbackBtn = !isCurrent ? `<button class="text-[12px] text-[#484f58] hover:text-[#388bfd] hover:bg-[#1c2128] rounded px-1 py-0.5 cursor-pointer transition-colors" title="Restore ${label}" onclick="doRollback('${encodeURIComponent(v.version)}')">↺</button>` : '';
+          return `<li class="flex items-center gap-1.5 py-1 ${!isCurrent ? 'hover:bg-[#1c2128] rounded px-1 -mx-1' : 'px-1 -mx-1'}">
             <span class="text-[8px] ${isCurrent ? "text-[#388bfd]" : "text-[#30363d]"}">▸</span>
-            <button class="font-mono text-xs ${isCurrent ? "text-[#388bfd] font-medium" : "text-[#8b949e] hover:text-[#e6edf3]"}"
-              onclick="viewVersion('${encodeURIComponent(v.version)}')">${v.version}${isCurrent ? " (current)" : ""}</button>
-            <span class="text-[#484f58] text-[10px] ml-auto">${relativeTime(v.date)}</span>
+            <button class="font-mono text-[13px] ${isCurrent ? "text-[#388bfd] font-semibold" : "text-[#c9d1d9] hover:text-[#e6edf3]"}"
+              onclick="viewVersion('${encodeURIComponent(v.version)}')">${label}${isCurrent ? " (current)" : ""}</button>
+            <span class="text-[#6e7681] text-[11px] ml-auto">${relativeTime(v.date)}</span>
+            ${rollbackBtn}
           </li>`;
         }).join("");
+        if (versions.length > VERSIONS_COLLAPSED_COUNT) {
+          toggle.classList.remove("hidden");
+          toggle.textContent = versionsExpanded ? "Show less" : `Show all ${versions.length} versions`;
+        } else {
+          toggle.classList.add("hidden");
+        }
       }
+
+      window.doRollback = async function(encodedVersion) {
+        const ver = decodeURIComponent(encodedVersion);
+        if (!selectedName || !confirm(`Rollback to v${ver}?`)) return;
+        const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/rollback?to=${encodeURIComponent(ver)}`, { method: "POST" });
+        const d = await r.json();
+        if (!r.ok) { alert(`Rollback failed: ${d.error}`); return; }
+        await loadSkills(); await selectSkill(selectedName);
+      };
+
+      document.getElementById("versions-toggle").addEventListener("click", () => {
+        versionsExpanded = !versionsExpanded;
+        renderVersionsList();
+      });
 
       window.viewVersion = async function(encodedVersion) {
         if (!selectedName) return;
@@ -1072,65 +1141,53 @@
       async function loadFeedback(name) {
         const r = await api(`/api/skills/${encodeURIComponent(name)}/feedback`);
         feedback = r.ok ? await r.json() : null;
-        const rate = document.getElementById("fb-rate");
-        const count = document.getElementById("fb-count");
-        const last = document.getElementById("fb-last");
-        const sparkWrap = document.getElementById("feedback-sparkline-wrap");
+        const usage = document.getElementById("info-usage");
+        const lastUsed = document.getElementById("info-last-used");
         if (feedback && feedback.usageCount > 0) {
-          rate.textContent = `${Math.round(feedback.successRate * 100)}%`;
-          rate.className = `font-mono ${feedback.successRate >= 0.7 ? "text-[#3fb950]" : feedback.successRate >= 0.4 ? "text-[#d29922]" : "text-[#f85149]"}`;
-          count.textContent = feedback.usageCount;
-          last.textContent = relativeTime(feedback.lastUsedAt);
-          // Render sparkline from last N invocations
-          const invocations = (feedback.invocations ?? []).slice(-20);
-          renderSparkline(invocations);
-          sparkWrap.classList.remove("hidden");
+          usage.textContent = feedback.usageCount;
+          lastUsed.textContent = relativeTime(feedback.lastUsedAt);
         } else {
-          rate.textContent = "—"; count.textContent = "—"; last.textContent = "—";
-          sparkWrap.classList.add("hidden");
+          usage.textContent = "—";
+          lastUsed.textContent = "—";
         }
       }
 
-      function renderSparkline(invocations) {
-        const svg = document.getElementById("feedback-sparkline");
-        if (invocations.length === 0) { svg.innerHTML = ""; return; }
-        const w = 80, h = 20, n = invocations.length;
-        const step = w / Math.max(n, 1);
-        const bars = invocations.map((inv, i) => {
-          const color = inv.outcome === "success" ? "#3fb950" : inv.outcome === "failure" ? "#f85149" : "#8b949e";
-          const bw = Math.max(step - 1, 2);
-          const bh = inv.outcome === "success" ? h : inv.outcome === "failure" ? h / 2 : h / 3;
-          return `<rect x="${i * step}" y="${h - bh}" width="${bw}" height="${bh}" fill="${color}" rx="1"/>`;
-        }).join("");
-        svg.innerHTML = bars;
-        svg.setAttribute("title", `${invocations.filter(i => i.outcome === "success").length}/${n} successes`);
+      const statusActionMap = {
+        'draft→staging': 'move',
+        'draft→published': 'move',
+        'draft→archived': 'move',
+        'staging→draft': 'move',
+        'staging→published': 'move',
+        'staging→archived': 'move',
+        'published→draft': 'move',
+        'published→staging': 'move',
+        'published→archived': 'move',
+        'archived→draft': 'move',
+        'archived→staging': 'move',
+        'archived→published': 'move',
+      };
+
+      function renderStatus(skill) {
+        const btns = document.querySelectorAll('.status-seg-btn');
+        btns.forEach(btn => {
+          const s = btn.dataset.status;
+          const isCurrent = s === skill.status;
+          const key = `${skill.status}→${s}`;
+          btn.classList.toggle('status-seg-active', isCurrent);
+          btn.disabled = isCurrent || !statusActionMap[key];
+        });
+      }
+
+      function renderInfo(skill) {
+        document.getElementById("info-last-updated").textContent = skill.lastImprovedAt ? relativeTime(skill.lastImprovedAt) : "—";
+        const created = versions.length > 0 ? versions[versions.length - 1].date : null;
+        document.getElementById("info-created").textContent = created ? relativeTime(created) : "—";
+        document.getElementById("info-source").textContent = skill.source ?? "—";
+        document.getElementById("info-revisions").textContent = skill.revisionCount ?? 0;
       }
 
       function renderActions(skill) {
-        const actions = { promote: false, graduate: false, reject: false, rollback: false, disable: false, archive: false, reactivate: false };
-        if (skill.status === "draft")     { actions.promote = true; actions.rollback = false; actions.disable = true; actions.archive = true; }
-        if (skill.status === "staging")   { actions.graduate = true; actions.reject = true; actions.disable = true; }
-        if (skill.status === "published") { actions.rollback = true; actions.disable = true; actions.archive = true; }
-        if (skill.status === "archived")  { actions.reactivate = true; }
-        if (skill.status === "disabled")  { actions.reactivate = true; }
-
-        document.getElementById("staging-actions").classList.toggle("hidden", skill.status !== "staging");
-        document.getElementById("btn-promote").classList.toggle("hidden", !actions.promote);
-        document.getElementById("btn-rollback").classList.toggle("hidden", !actions.rollback);
-        document.getElementById("btn-disable").classList.toggle("hidden", !actions.disable);
-        document.getElementById("btn-archive").classList.toggle("hidden", !actions.archive);
-        document.getElementById("btn-reactivate").classList.toggle("hidden", !actions.reactivate);
-        document.getElementById("no-actions").classList.toggle("hidden", Object.values(actions).some(Boolean) || skill.status === "staging");
-      }
-
-      function renderDetails(skill) {
-        const statusColors = { published: "text-[#3fb950]", staging: "text-[#f0b429]", draft: "text-[#d29922]", archived: "text-[#8b949e]", disabled: "text-[#484f58]" };
-        const el = document.getElementById("det-status");
-        el.textContent = skill.status;
-        el.className = `font-mono ${statusColors[skill.status] ?? ""}`;
-        document.getElementById("det-source").textContent = skill.source ?? "—";
-        document.getElementById("det-parent").textContent = skill.parentVersion ?? "—";
-        document.getElementById("det-revisions").textContent = skill.revisionCount ?? 0;
+        // Actions integrated into status segment
       }
 
       // ── Save / Discard ───────────────────────────────────────────────────
@@ -1193,26 +1250,24 @@
         if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); doSave(); }
       });
 
-      // ── Lifecycle actions ────────────────────────────────────────────────
-      document.getElementById("actions-panel").addEventListener("click", async (e) => {
-        const btn = e.target.closest("[data-action]");
-        if (!btn || !selectedName) return;
-        const action = btn.dataset.action;
-        if (action === "rollback") {
-          const ver = prompt("Rollback to version (e.g. 0.1.0):");
-          if (!ver) return;
-          const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/rollback?to=${encodeURIComponent(ver)}`, { method: "POST" });
-          const d = await r.json();
-          if (!r.ok) { alert(`Rollback failed: ${d.error}`); return; }
-          alert(`Rolled back to v${ver} — new version: v${d.newVersion}`);
-          await loadSkills(); await selectSkill(selectedName);
-          return;
-        }
-        const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/${action}`, { method: "POST" });
+      // ── Status segment click ─────────────────────────────────────────────
+      document.getElementById("status-segment").addEventListener("click", async (e) => {
+        const btn = e.target.closest(".status-seg-btn");
+        if (!btn || btn.disabled || !selectedName || !selectedSkill) return;
+        const newStatus = btn.dataset.status;
+        const current = selectedSkill.status;
+        const key = `${current}→${newStatus}`;
+        const action = statusActionMap[key];
+        if (!action) { alert(`Cannot transition from ${current} to ${newStatus}`); return; }
+        if (!confirm(`Change status to "${newStatus}"?`)) return;
+        const url = action === 'move'
+          ? `/api/skills/${encodeURIComponent(selectedName)}/${action}?to=${newStatus}`
+          : `/api/skills/${encodeURIComponent(selectedName)}/${action}`;
+        const r = await api(url, { method: "POST" });
         const d = await r.json();
-        if (!r.ok) { alert(`${action} failed: ${d.error}`); return; }
+        if (!r.ok) { alert(`Failed: ${d.error}`); return; }
         await loadSkills();
-        if (action === "reject") selectedName = null; // skill moved away
+        if (action === "reject") selectedName = null;
         else await selectSkill(selectedName);
       });
 
@@ -1226,7 +1281,7 @@
 
       // ── Dashboard ────────────────────────────────────────────────────────
       const SERIES_COLORS = ['#818cf8','#fbbf24','#34d399','#fb7185','#60a5fa','#a78bfa','#f472b6','#2dd4bf','#fb923c','#22d3ee'];
-      const STATUS_COLORS = { published:'#4ade80', staging:'#fbbf24', draft:'#60a5fa', archived:'#94a3b8', disabled:'#475569' };
+      const STATUS_COLORS = { published:'#4ade80', staging:'#fbbf24', draft:'#60a5fa', archived:'#94a3b8' };
       let dbData = null;
       let dbTablePage = 1;
       const DB_PAGE_SIZE = 15;
@@ -1445,7 +1500,7 @@
           const q = dbSearchQuery.toLowerCase();
           arr = arr.filter(s => s.name.toLowerCase().includes(q) || s.status.includes(q));
         }
-        const statusOrder = { published: 0, staging: 1, draft: 2, archived: 3, disabled: 4 };
+        const statusOrder = { published: 0, staging: 1, draft: 2, archived: 3 };
         const col = dbSortState.column;
         const dir = dbSortState.direction;
         arr.sort((a, b) => {

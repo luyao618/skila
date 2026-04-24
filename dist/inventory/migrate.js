@@ -7,7 +7,7 @@ import { skillsRoot, statusDir } from "../config/config.js";
 import { parseSkillFile, serializeSkillFile } from "../inventory/frontmatter.js";
 import { sidecarPathFor, writeSidecar, normalizeSkila } from "../inventory/sidecar.js";
 import { atomicWriteFileSync } from "../storage/atomic.js";
-const ALL_STATUSES = ["draft", "staging", "published", "archived", "disabled"];
+const ALL_STATUSES = ["draft", "staging", "published", "archived"];
 function collectSkillDirs() {
     const out = [];
     for (const status of ALL_STATUSES) {

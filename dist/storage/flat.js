@@ -15,7 +15,7 @@ function skillPath(name, status) {
     return join(statusDir(status), name, "SKILL.md");
 }
 function findSkillPathAnyStatus(name) {
-    const order = ["draft", "staging", "published", "archived", "disabled"];
+    const order = ["draft", "staging", "published", "archived"];
     for (const s of order) {
         const file = skillPath(name, s);
         if (existsSync(file))
