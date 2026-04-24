@@ -53,10 +53,9 @@ export function scanStatus(status: SkillStatus): Skill[] {
     } catch {
       continue;
     }
-    // FIX-H12: reject symlinked skill directories
+    // FIX-H12: follow symlinked skill directories but validate target below.
     if (st.isSymbolicLink()) {
       _lastWarnings.push({ type: "symlink", path: dir });
-      continue;
     }
     // Verify the resolved target is a directory and stays within root.
     let resolvedDir: string;

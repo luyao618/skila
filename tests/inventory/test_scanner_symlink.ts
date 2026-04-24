@@ -36,7 +36,7 @@ describe("FIX-H12: Scanner symlink + out-of-root rejection", () => {
     expect(getLastScanWarnings()).toHaveLength(0);
   });
 
-  it("rejects a symlinked skill directory and emits a warning", () => {
+  it("follows a symlinked skill directory and emits a warning", () => {
     // Create a real skill dir outside root
     const outside = mkdtempSync(join(tmpdir(), "skila-outside-"));
     try {
@@ -45,8 +45,8 @@ describe("FIX-H12: Scanner symlink + out-of-root rejection", () => {
       symlinkSync(join(outside, "evil-skill"), join(skillsRoot, "evil-link"));
 
       const skills = scanInventory();
-      // The symlinked entry should NOT appear in results
-      expect(skills.find(s => s.name === "evil-skill")).toBeUndefined();
+      // The symlinked entry SHOULD appear in results (symlinks are followed)
+      expect(skills.find(s => s.name === "evil-skill")).toBeDefined();
 
       const warnings = getLastScanWarnings();
       expect(warnings.some(w => w.type === "symlink")).toBe(true);
@@ -56,7 +56,7 @@ describe("FIX-H12: Scanner symlink + out-of-root rejection", () => {
     }
   });
 
-  it("does not include symlinked skill content even when legitimate skills exist", () => {
+  it("includes symlinked skill content alongside legitimate skills", () => {
     // Create a real skill
     makeSkill(join(skillsRoot, "real-skill"), "real-skill");
     // Create symlink to outside
@@ -67,7 +67,7 @@ describe("FIX-H12: Scanner symlink + out-of-root rejection", () => {
 
       const skills = scanInventory();
       expect(skills.some(s => s.name === "real-skill")).toBe(true);
-      expect(skills.some(s => s.name === "hacked")).toBe(false);
+      expect(skills.some(s => s.name === "hacked")).toBe(true);
 
       const warnings = getLastScanWarnings();
       expect(warnings.some(w => w.type === "symlink")).toBe(true);
