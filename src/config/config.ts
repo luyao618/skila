@@ -8,6 +8,7 @@ import { join } from "node:path";
 export interface SkilaConfig {
   port: number;
   promotionFloorInvocations: number;
+  publishFloorInvocations: number;
   promotionFloorFailures: number;
   judgeTokenBudget: number;
   lockTimeoutMs: number;
@@ -20,7 +21,8 @@ export interface SkilaConfig {
 
 export const DEFAULT_CONFIG: SkilaConfig = {
   port: 7777,
-  promotionFloorInvocations: 10,
+  promotionFloorInvocations: 3,
+  publishFloorInvocations: 10,
   promotionFloorFailures: 1,
   judgeTokenBudget: 4000,
   lockTimeoutMs: 500,

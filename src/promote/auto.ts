@@ -56,14 +56,22 @@ export async function maybeAutoPromote(name: string): Promise<AutoPromoteResult>
     // section to guard against TOCTOU races.
     const skill = findSkill(name);
     if (!skill) return { promoted: false, reason: "skill not in inventory" };
-    // Auto-promotion only fires from draft → staging. Published skills are not re-staged.
-    if (skill.status !== "draft") return { promoted: false, reason: `status=${skill.status}; auto-promote only acts on drafts` };
+    // draft → staging (≥3 uses) or staging → published (≥10 uses)
+    if (skill.status === "draft") {
+      const dest = join(statusDir("staging"), name);
+      if (existsSync(dest)) return { promoted: false, reason: "already staged" };
+      await moveSkillDir(skill, "staging");
+      return { promoted: true, reason: "floor met (draft→staging)", destination: dest };
+    }
 
-    const dest = join(statusDir("staging"), name);
-    if (existsSync(dest)) return { promoted: false, reason: "already staged" };
+    if (skill.status === "staging" && fb.usageCount >= cfg.publishFloorInvocations) {
+      const dest = join(statusDir("published"), name);
+      if (existsSync(dest)) return { promoted: false, reason: "already published" };
+      await moveSkillDir(skill, "published");
+      return { promoted: true, reason: "floor met (staging→published)", destination: dest };
+    }
 
-    await moveSkillDir(skill, "staging");
-    return { promoted: true, reason: "floor met", destination: dest };
+    return { promoted: false, reason: `status=${skill.status}; no promotion rule matched` };
   } finally {
     releasePromoteLock(lockPath);
   }
