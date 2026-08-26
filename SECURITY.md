@@ -52,7 +52,31 @@ cannot authorize `style="..."` *attributes* (only `'unsafe-inline'` or
 `'unsafe-hashes'` can), the markup contains 18 of them, and ECharts injects
 styles at runtime. Script execution remains fully gated by `script-src`, so the
 residual exposure is CSS-only. Removing it requires moving those attributes into
-the stylesheet.
+the stylesheet and assessing ECharts' runtime style injection — tracked as
+YAO-349.
+
+### Browser-backed regression gate
+
+`tests/web/test_phase1_browser_gate.ts` drives the real UI in headless Chromium
+against the real server and the built `dist/web/index.html`. It is the authority
+for the sanitizer contract, because it executes the page's own `safeMarkdown()`
+rather than re-implementing the pipeline. It asserts that:
+
+- the sha256 CSP actually authorizes the inline module (the app boots),
+- both `innerHTML` sinks — the Preview tab and the live-update listener fired by
+  typing into the editor — strip hostile markup,
+- no payload executes and no CSP violation or page error is raised,
+- and a missing manifest fails closed: `script-src 'self'` with no `unsafe-*`,
+  and the app does not boot.
+
+Run it with `npm run test:browser-gate` (requires
+`npx playwright install chromium`). CI runs it as a dedicated job with
+`SKILA_BROWSER_GATE=1`, which makes a missing browser a hard failure instead of
+a silent skip.
+
+The jsdom tests in `tests/web/test_phase1_xss_csp.ts` remain as a fast
+pre-filter; they extract the real `PURIFY_CFG` from `index.html`, but only the
+browser gate proves the production path.
 
 ## Bundled vendor code
 

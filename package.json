@@ -24,6 +24,7 @@
     "test:watch": "vitest",
     "pack:check": "npm pack --dry-run",
     "audit:vendor": "node scripts/vendor-audit.mjs",
+    "test:browser-gate": "SKILA_BROWSER_GATE=1 vitest run tests/web/test_phase1_browser_gate.ts",
     "mcp": "node dist/cli.js mcp",
     "serve": "node dist/cli.js serve",
     "prepublishOnly": "npm run build",

@@ -60,6 +60,37 @@ jobs:
       - name: Pack smoke check
         run: npm run pack:check
 
+  browser-gate:
+    name: XSS/CSP browser gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install (clean, from lockfile)
+        run: npm ci --ignore-scripts
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # The gate loads the built artifact, so it must exist first.
+      - name: Build
+        run: npm run build
+
+      # Drives the real UI in Chromium against the real server: proves the
+      # sha256 CSP authorises the app to boot, that both innerHTML sinks strip
+      # hostile markup as they run in production, that no payload executes, and
+      # that a missing manifest fails closed. SKILA_BROWSER_GATE=1 makes the
+      # suite hard-fail instead of skipping when Chromium is unavailable.
+      - name: Run XSS/CSP browser gate
+        env:
+          SKILA_BROWSER_GATE: '1'
+        run: npx vitest run tests/web/test_phase1_browser_gate.ts
+
   audit:
     name: production audit
     runs-on: ubuntu-latest

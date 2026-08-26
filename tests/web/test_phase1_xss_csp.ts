@@ -218,11 +218,11 @@ describe("Phase 1 — built artifact stays CSP-compatible", () => {
 });
 
 describe("Phase 1 — DOMPurify neutralises hostile Markdown", () => {
-  // The config is NOT redeclared here. index.html is a standalone artifact with
-  // no import mechanism, so a hand-copied PURIFY_CFG would silently stop
-  // reflecting reality the moment the real one changed. Extract the actual
-  // source instead: if someone loosens the allowlist in index.html, these
-  // assertions see the loosened config and fail.
+  // These run the real PURIFY_CFG extracted from index.html, but they still
+  // re-invoke the pipeline themselves rather than executing the page's own
+  // safeMarkdown(). That makes them a fast pre-filter, NOT the authority:
+  // tests/web/test_phase1_browser_gate.ts drives both innerHTML sinks in real
+  // Chromium and is what actually proves the production path is safe.
   const HTML_SRC = readFileSync(join(ROOT, "src", "web", "index.html"), "utf8");
 
   function extractPurifyCfg(): Record<string, unknown> {
