@@ -4,6 +4,7 @@
 
 import { build } from "esbuild";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, copyFileSync, readFileSync, writeFileSync, chmodSync, existsSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,20 +27,19 @@ mkdirSync(join(DIST, "web"), { recursive: true });
 console.log("[postbuild] esbuild: bundling CodeMirror + marked → dist/web/vendor/cm.js");
 const entryShim = join(SRC, "web", "vendor-entry.mjs");
 mkdirSync(dirname(entryShim), { recursive: true });
-// Idempotent: only write vendor-entry.mjs if it doesn't already exist
-if (!existsSync(entryShim)) {
-  writeFileSync(
-    entryShim,
-    [
-      "// Auto-generated vendor entry consumed only by scripts/postbuild.mjs.",
-      "export { EditorState, Compartment } from \"@codemirror/state\";",
-      "export { EditorView, keymap, lineNumbers, highlightActiveLine } from \"@codemirror/view\";",
-      "export { markdown } from \"@codemirror/lang-markdown\";",
-      "export { marked } from \"marked\";",
-      ""
-    ].join("\n")
-  );
-}
+// Always rewrite: this file is gitignored, so a stale copy from an older
+// checkout would silently omit newer exports (e.g. the DOMPurify sanitizer)
+// from the vendor bundle.
+const ENTRY_SHIM_SOURCE = [
+  "// Auto-generated vendor entry consumed only by scripts/postbuild.mjs.",
+  "export { EditorState, Compartment } from \"@codemirror/state\";",
+  "export { EditorView, keymap, lineNumbers, highlightActiveLine } from \"@codemirror/view\";",
+  "export { markdown } from \"@codemirror/lang-markdown\";",
+  "export { marked } from \"marked\";",
+  "export { default as DOMPurify } from \"dompurify\";",
+  ""
+].join("\n");
+writeFileSync(entryShim, ENTRY_SHIM_SOURCE);
 
 await build({
   entryPoints: [entryShim],
@@ -163,6 +163,48 @@ if (existsSync(indexHtmlPath)) {
   console.log("[postbuild] AC16 CDN check passed: no https:// in dist/web/index.html");
 } else {
   console.warn("[postbuild] WARNING: dist/web/index.html not found — skipping AC16 CDN check");
+}
+
+// CSP inline-script hashes. Computed from the FINAL dist/web/index.html — the
+// same bytes the browser will execute — so the header can never drift from the
+// served page. Any inline handler (onclick=) would need 'unsafe-hashes' to run,
+// which defeats the point, so bail instead: use addEventListener.
+const cspHashesPath = join(DIST, "web", "csp-hashes.json");
+if (existsSync(indexHtmlPath)) {
+  const html = readFileSync(indexHtmlPath, "utf8");
+
+  const inlineHandlers = html.match(/\son[a-z]+\s*=\s*["']/gi);
+  if (inlineHandlers) {
+    console.error(
+      `[postbuild] CSP violation: dist/web/index.html has ${inlineHandlers.length} inline event handler(s) ` +
+      `(${[...new Set(inlineHandlers.map(h => h.trim().split(/[\s=]/)[0]))].join(", ")}). ` +
+      `Use addEventListener — inline handlers would require 'unsafe-hashes'.`
+    );
+    process.exit(1);
+  }
+
+  const hashes = [];
+  // Only bodyless <script> blocks are inline; <script src=...> is covered by 'self'.
+  for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
+    const body = m[1];
+    if (body.trim() === "") continue;
+    hashes.push(`sha256-${createHash("sha256").update(body, "utf8").digest("base64")}`);
+  }
+
+  const styleHashes = [];
+  for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)) {
+    const body = m[1];
+    if (body.trim() === "") continue;
+    styleHashes.push(`sha256-${createHash("sha256").update(body, "utf8").digest("base64")}`);
+  }
+
+  // styleSrc is recorded for reference only — server.ts does not use it. CSP
+  // hashes cannot authorise `style="..."` attributes (18 of them in the markup)
+  // and ECharts injects styles at runtime, so style-src keeps 'unsafe-inline'.
+  writeFileSync(cspHashesPath, JSON.stringify({ scriptSrc: hashes, styleSrc: styleHashes }, null, 2) + "\n");
+  console.log(`[postbuild] CSP hashes: ${hashes.length} inline script(s) → dist/web/csp-hashes.json`);
+} else {
+  console.warn("[postbuild] WARNING: dist/web/index.html not found — skipping CSP hash generation");
 }
 
 console.log("[postbuild] done.");

@@ -584,7 +584,35 @@
     </div><!-- #app -->
 
     <script type="module">
-      import { EditorState, Compartment, EditorView, keymap, lineNumbers, highlightActiveLine, markdown, marked } from "./vendor/cm.js";
+      import { EditorState, Compartment, EditorView, keymap, lineNumbers, highlightActiveLine, markdown, marked, DOMPurify } from "./vendor/cm.js";
+
+      // ── Markdown sanitization ─────────────────────────────────────────────
+      // marked does NOT sanitize its output (the `sanitize` option was removed
+      // in marked v1.0.0), and SKILL.md content can come from an LLM or an
+      // external file. Rendering it straight into innerHTML is same-origin XSS,
+      // and the auth cookie rides along automatically on any request the
+      // injected script makes. Always sanitize the *output* HTML — sanitizing
+      // the Markdown input instead would mangle legitimate syntax and still
+      // miss raw HTML that Markdown passes through verbatim.
+      const PURIFY_CFG = {
+        ALLOWED_TAGS: [
+          "h1","h2","h3","h4","h5","h6",
+          "p","br","hr",
+          "strong","b","em","i","del","s",
+          "code","pre","blockquote",
+          "ul","ol","li",
+          "table","thead","tbody","tr","th","td",
+          "a","img",
+          "details","summary"
+        ],
+        // No `style`: it would reopen CSS-based data exfiltration.
+        ALLOWED_ATTR: ["href","src","alt","title","class","id","align","width","height"],
+        ALLOW_DATA_ATTR: false
+      };
+
+      function safeMarkdown(src) {
+        return DOMPurify.sanitize(marked.parse(src), PURIFY_CFG);
+      }
 
       // ── State ─────────────────────────────────────────────────────────────
       let skills = [];
@@ -752,9 +780,9 @@
           sidePanel.classList.remove("hidden");
           const src = cmView ? cmView.state.doc.toString() : "";
           try {
-            previewRendered.innerHTML = marked.parse(src);
+            previewRendered.innerHTML = safeMarkdown(src);
           } catch (e) {
-            previewRendered.innerHTML = `<pre style="color:#f85149">Preview render error: ${String(e)}</pre>`;
+            previewRendered.innerHTML = `<pre style="color:#f85149">Preview render error: ${esc(String(e))}</pre>`;
           }
         } else if (activeView === "translate") {
           translateResult.classList.remove("hidden");
@@ -936,7 +964,7 @@
                 document.getElementById("btn-discard").disabled = !dirty;
                 // Live re-render preview if it's currently shown
                 if (activeView === "preview") {
-                  try { document.getElementById("preview-rendered").innerHTML = marked.parse(update.state.doc.toString()); }
+                  try { document.getElementById("preview-rendered").innerHTML = safeMarkdown(update.state.doc.toString()); }
                   catch { /* ignore transient parse errors */ }
                 }
               }
@@ -1097,11 +1125,11 @@
           const isCurrent = i === 0;
           const idx = versions.length - (versionsExpanded ? i : i);
           const label = `v${esc(v.version)}`;
-          const rollbackBtn = !isCurrent ? `<button class="text-[12px] text-[#484f58] hover:text-[#388bfd] hover:bg-[#1c2128] rounded px-1 py-0.5 cursor-pointer transition-colors" title="Restore ${label}" onclick="doRollback('${encodeURIComponent(v.version)}')">↺</button>` : '';
+          const rollbackBtn = !isCurrent ? `<button class="text-[12px] text-[#484f58] hover:text-[#388bfd] hover:bg-[#1c2128] rounded px-1 py-0.5 cursor-pointer transition-colors" title="Restore ${label}" data-action="rollback" data-version="${esc(v.version)}">↺</button>` : '';
           return `<li class="flex items-center gap-1.5 py-1 ${!isCurrent ? 'hover:bg-[#1c2128] rounded px-1 -mx-1' : 'px-1 -mx-1'}">
             <span class="text-[8px] ${isCurrent ? "text-[#388bfd]" : "text-[#30363d]"}">▸</span>
             <button class="font-mono text-[13px] ${isCurrent ? "text-[#388bfd] font-semibold" : "text-[#c9d1d9] hover:text-[#e6edf3]"}"
-              onclick="viewVersion('${encodeURIComponent(v.version)}')">${label}${isCurrent ? " (current)" : ""}</button>
+              data-action="view-version" data-version="${esc(v.version)}">${label}${isCurrent ? " (current)" : ""}</button>
             <span class="text-[#6e7681] text-[11px] ml-auto">${relativeTime(v.date)}</span>
             ${rollbackBtn}
           </li>`;
@@ -1114,30 +1142,40 @@
         }
       }
 
-      window.doRollback = async function(encodedVersion) {
-        const ver = decodeURIComponent(encodedVersion);
+      async function doRollback(ver) {
         if (!selectedName || !confirm(`Rollback to v${ver}?`)) return;
         const r = await api(`/api/skills/${encodeURIComponent(selectedName)}/rollback?to=${encodeURIComponent(ver)}`, { method: "POST" });
         const d = await r.json();
         if (!r.ok) { alert(`Rollback failed: ${d.error}`); return; }
         await loadSkills(); await selectSkill(selectedName);
-      };
+      }
 
       document.getElementById("versions-toggle").addEventListener("click", () => {
         versionsExpanded = !versionsExpanded;
         renderVersionsList();
       });
 
-      window.viewVersion = async function(encodedVersion) {
+      // Delegated: the version list is re-rendered via innerHTML, so binding
+      // per-button would leak listeners. Keeping these out of the markup is
+      // what lets script-src drop 'unsafe-inline' without 'unsafe-hashes'.
+      document.getElementById("versions-list").addEventListener("click", (ev) => {
+        const btn = ev.target.closest("[data-action]");
+        if (!btn) return;
+        const version = btn.dataset.version;
+        if (!version) return;
+        if (btn.dataset.action === "rollback") doRollback(version);
+        else if (btn.dataset.action === "view-version") viewVersion(version);
+      });
+
+      async function viewVersion(version) {
         if (!selectedName) return;
-        const version = decodeURIComponent(encodedVersion);
         const r = await fetch(`/api/skills/${encodeURIComponent(selectedName)}/diff?from=${encodeURIComponent(versions[versions.length - 1]?.version ?? version)}&to=${encodeURIComponent(version)}`);
         if (!r.ok) return;
         const d = await r.json();
         loadContentIntoEditor(d.diff ?? "(no diff)", false);
         document.getElementById("editor").classList.remove("hidden");
         document.getElementById("file-list-view").classList.add("hidden");
-      };
+      }
 
       async function loadFeedback(name) {
         const r = await api(`/api/skills/${encodeURIComponent(name)}/feedback`);

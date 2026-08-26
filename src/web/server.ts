@@ -171,7 +171,7 @@ async function route(req: IncomingMessage, res: ServerResponse, distDir: string,
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
-  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'");
+  res.setHeader("Content-Security-Policy", buildCsp(distDir));
 
   // ── Static assets ──────────────────────────────────────────────────────────
   if (method === "GET" && path === "/") {
@@ -282,6 +282,70 @@ async function route(req: IncomingMessage, res: ServerResponse, distDir: string,
   }
 
   sendJson(res, 404, { error: `not found: ${method} ${path}` });
+}
+
+// CSP: the inline <script> hashes are generated at build time by
+// scripts/postbuild.mjs from the final dist/web/index.html, so the header
+// always matches the bytes actually served. Cached after first read.
+//
+// Deliberately no 'unsafe-inline' for script-src: if the hash file is missing
+// the page breaks loudly rather than silently reverting to an insecure policy.
+//
+// style-src DOES keep 'unsafe-inline'. That is not an oversight — CSP hashes
+// simply do not apply to `style="..."` attributes (only 'unsafe-inline' or
+// 'unsafe-hashes' enables those), and the UI carries 18 of them plus ECharts,
+// which injects styles at runtime. Verified in Chromium: hashing style-src
+// blocks rendering outright. The XSS risk this leaves is CSS-only — script
+// execution is still fully gated by script-src, and the sanitizer strips
+// `style` from rendered Markdown. Removing it means porting those attributes
+// into the stylesheet; tracked as Phase 2 follow-up rather than shipped broken.
+let cspCache: { distDir: string; value: string } | null = null;
+let cspManifestWarned = false;
+
+function buildCsp(distDir: string): string {
+  if (cspCache && cspCache.distDir === distDir) return cspCache.value;
+
+  // Fail closed. If the manifest is missing or unreadable we do NOT fall back
+  // to 'unsafe-inline', and we do not quietly emit a policy that blocks the
+  // page either — say why, once, so a broken deploy is diagnosable instead of
+  // presenting as "the UI is blank".
+  let scriptSrc = "'self'";
+  const manifestPath = join(distDir, "csp-hashes.json");
+  try {
+    const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as { scriptSrc?: unknown };
+    const hashes = parsed.scriptSrc;
+    if (!Array.isArray(hashes) || hashes.length === 0) {
+      throw new Error("manifest has no scriptSrc hashes");
+    }
+    for (const h of hashes) {
+      if (typeof h !== "string" || !/^sha256-[A-Za-z0-9+/]+=*$/.test(h)) {
+        throw new Error(`malformed hash entry: ${String(h)}`);
+      }
+    }
+    scriptSrc += " " + hashes.map(h => `'${h}'`).join(" ");
+  } catch (err) {
+    if (!cspManifestWarned) {
+      cspManifestWarned = true;
+      process.stderr.write(
+        `skila: CSP manifest unusable (${manifestPath}): ${(err as Error).message}\n` +
+        `skila: serving script-src 'self' only — the inline app script will be BLOCKED. Run 'npm run build'.\n`
+      );
+    }
+  }
+
+  const value = [
+    "default-src 'self'",
+    `script-src ${scriptSrc}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+
+  cspCache = { distDir, value };
+  return value;
 }
 
 // FIX-H13: Content-Type checks. JSON-only routes reject any other CT.

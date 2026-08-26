@@ -1,8 +1,27 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { main, SkilaError } from "../../src/cli.js";
+
+// Without SKILA_HOME these commands operate on the developer's real
+// ~/.claude/skila-data. The `feedback` case below takes a lockfile there, so
+// concurrent vitest workers contend for one shared lock and intermittently hit
+// "feedback lock acquire timeout". Give every test its own home.
+let tmpHome: string | undefined;
+
+beforeEach(() => {
+  tmpHome = mkdtempSync(join(tmpdir(), "skila-cli-argv-"));
+  process.env.SKILA_HOME = tmpHome;
+  process.env.SKILA_SKILLS_ROOT = join(tmpHome, "skills");
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
+  delete process.env.SKILA_HOME;
+  delete process.env.SKILA_SKILLS_ROOT;
+  if (tmpHome) { try { rmSync(tmpHome, { recursive: true, force: true }); } catch {} }
+  tmpHome = undefined;
 });
 
 // FIX-H18: --port declared in parseArgs options
