@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build & test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 20.19 is the floor, not plain 20: vitest 4's rolldown binding declares
+        # `engines: ^20.19.0 || >=22.12.0`, so on older 20.x npm silently skips
+        # the native binding and the suite dies at startup.
+        node: ['20.19', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # `npm ci` is the merge gate for lockfile integrity: it fails outright if
+      # package.json and package-lock.json have drifted apart.
+      - name: Install (clean, from lockfile)
+        run: npm ci --ignore-scripts
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Pack smoke check
+        run: npm run pack:check
+
+  audit:
+    name: production audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Blocking: anything shipped to users must be advisory-clean.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=low
+
+      # Non-blocking: dev/build-path advisories are visible but must not wedge
+      # the merge gate on an upstream fix we do not control.
+      - name: Audit all dependencies (report only)
+        run: npm audit || true

@@ -5,7 +5,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 export const DEFAULT_CONFIG = {
     port: 7777,
-    promotionFloorInvocations: 10,
+    promotionFloorInvocations: 3,
+    publishFloorInvocations: 10,
     promotionFloorFailures: 1,
     judgeTokenBudget: 4000,
     lockTimeoutMs: 500,
