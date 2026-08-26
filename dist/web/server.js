@@ -158,7 +158,7 @@ async function route(req, res, distDir, serverToken) {
     res.setHeader("Referrer-Policy", "no-referrer");
     res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
     res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
-    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'");
+    res.setHeader("Content-Security-Policy", buildCsp(distDir));
     // ── Static assets ──────────────────────────────────────────────────────────
     if (method === "GET" && path === "/") {
         const indexPath = join(distDir, "index.html");
@@ -285,6 +285,48 @@ async function route(req, res, distDir, serverToken) {
         return;
     }
     sendJson(res, 404, { error: `not found: ${method} ${path}` });
+}
+// CSP: the inline <script> hashes are generated at build time by
+// scripts/postbuild.mjs from the final dist/web/index.html, so the header
+// always matches the bytes actually served. Cached after first read.
+//
+// Deliberately no 'unsafe-inline' for script-src: if the hash file is missing
+// the page breaks loudly rather than silently reverting to an insecure policy.
+//
+// style-src DOES keep 'unsafe-inline'. That is not an oversight — CSP hashes
+// simply do not apply to `style="..."` attributes (only 'unsafe-inline' or
+// 'unsafe-hashes' enables those), and the UI carries 18 of them plus ECharts,
+// which injects styles at runtime. Verified in Chromium: hashing style-src
+// blocks rendering outright. The XSS risk this leaves is CSS-only — script
+// execution is still fully gated by script-src, and the sanitizer strips
+// `style` from rendered Markdown. Removing it means porting those attributes
+// into the stylesheet; tracked as Phase 2 follow-up rather than shipped broken.
+let cspCache = null;
+function buildCsp(distDir) {
+    if (cspCache && cspCache.distDir === distDir)
+        return cspCache.value;
+    let scriptSrc = "'self'";
+    try {
+        const raw = readFileSync(join(distDir, "csp-hashes.json"), "utf8");
+        const parsed = JSON.parse(raw);
+        if (parsed.scriptSrc?.length)
+            scriptSrc += " " + parsed.scriptSrc.map(h => `'${h}'`).join(" ");
+    }
+    catch {
+        // Unbuilt tree or hand-assembled dist. 'self' alone is the safe direction.
+    }
+    const value = [
+        "default-src 'self'",
+        `script-src ${scriptSrc}`,
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "frame-ancestors 'none'",
+    ].join("; ");
+    cspCache = { distDir, value };
+    return value;
 }
 // FIX-H13: Content-Type checks. JSON-only routes reject any other CT.
 function checkContentTypeJson(req, res) {

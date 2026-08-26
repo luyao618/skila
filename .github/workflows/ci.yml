@@ -40,6 +40,20 @@ jobs:
       - name: Build
         run: npm run build
 
+      # dist/ is committed (the plugin marketplace installs from this repo), so
+      # a rebuild must reproduce it exactly. This catches the failure mode where
+      # source changes land without the regenerated artifact — which previously
+      # shipped a stale dist/ for a whole release — and, since the CSP hashes are
+      # derived from dist/web/index.html, it also catches CSP/artifact drift.
+      - name: Check committed dist/ matches a fresh build
+        run: |
+          if ! git diff --quiet -- dist; then
+            echo "::error::dist/ is stale — run 'npm run build' and commit the result."
+            git diff --stat -- dist
+            exit 1
+          fi
+          echo "dist/ is reproducible"
+
       - name: Test
         run: npm test
 
