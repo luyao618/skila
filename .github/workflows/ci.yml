@@ -75,7 +75,19 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=low
 
+      # Needed by audit:vendor below, which reads package-lock + the committed
+      # dist/ artifacts. The audits above query the registry and need no install.
+      - name: Install (clean, from lockfile)
+        run: npm ci --ignore-scripts
+
       # Non-blocking: dev/build-path advisories are visible but must not wedge
       # the merge gate on an upstream fix we do not control.
       - name: Audit all dependencies (report only)
         run: npm audit || true
+
+      # `npm audit --omit=dev` structurally cannot see packages that esbuild
+      # bundles into dist/web/vendor/* — they are devDependencies that ship
+      # inside the tarball. This surfaces their advisories explicitly so
+      # shipped vendor code is tracked rather than silently exempt.
+      - name: Audit bundled vendor code (report only)
+        run: npm run audit:vendor

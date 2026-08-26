@@ -23,6 +23,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "pack:check": "npm pack --dry-run",
+    "audit:vendor": "node scripts/vendor-audit.mjs",
     "mcp": "node dist/cli.js mcp",
     "serve": "node dist/cli.js serve",
     "prepublishOnly": "npm run build",

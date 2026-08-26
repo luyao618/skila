@@ -302,18 +302,35 @@ async function route(req, res, distDir, serverToken) {
 // `style` from rendered Markdown. Removing it means porting those attributes
 // into the stylesheet; tracked as Phase 2 follow-up rather than shipped broken.
 let cspCache = null;
+let cspManifestWarned = false;
 function buildCsp(distDir) {
     if (cspCache && cspCache.distDir === distDir)
         return cspCache.value;
+    // Fail closed. If the manifest is missing or unreadable we do NOT fall back
+    // to 'unsafe-inline', and we do not quietly emit a policy that blocks the
+    // page either — say why, once, so a broken deploy is diagnosable instead of
+    // presenting as "the UI is blank".
     let scriptSrc = "'self'";
+    const manifestPath = join(distDir, "csp-hashes.json");
     try {
-        const raw = readFileSync(join(distDir, "csp-hashes.json"), "utf8");
-        const parsed = JSON.parse(raw);
-        if (parsed.scriptSrc?.length)
-            scriptSrc += " " + parsed.scriptSrc.map(h => `'${h}'`).join(" ");
+        const parsed = JSON.parse(readFileSync(manifestPath, "utf8"));
+        const hashes = parsed.scriptSrc;
+        if (!Array.isArray(hashes) || hashes.length === 0) {
+            throw new Error("manifest has no scriptSrc hashes");
+        }
+        for (const h of hashes) {
+            if (typeof h !== "string" || !/^sha256-[A-Za-z0-9+/]+=*$/.test(h)) {
+                throw new Error(`malformed hash entry: ${String(h)}`);
+            }
+        }
+        scriptSrc += " " + hashes.map(h => `'${h}'`).join(" ");
     }
-    catch {
-        // Unbuilt tree or hand-assembled dist. 'self' alone is the safe direction.
+    catch (err) {
+        if (!cspManifestWarned) {
+            cspManifestWarned = true;
+            process.stderr.write(`skila: CSP manifest unusable (${manifestPath}): ${err.message}\n` +
+                `skila: serving script-src 'self' only — the inline app script will be BLOCKED. Run 'npm run build'.\n`);
+        }
     }
     const value = [
         "default-src 'self'",

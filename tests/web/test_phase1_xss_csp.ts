@@ -92,6 +92,97 @@ describe("Phase 1 — CSP no longer allows inline script execution", () => {
   });
 });
 
+describe("Phase 1 — CSP manifest fails closed", () => {
+  // A broken/absent manifest must never degrade to 'unsafe-inline'. It is
+  // allowed to break the page (script-src 'self' blocks the inline module) —
+  // that is the safe direction — but it must never widen the policy.
+  async function cspFor(distDir: string, port: number): Promise<string> {
+    const { port: p, close } = await startServer({ port, distDir });
+    closers.push(close);
+    const r = await fetch(`http://127.0.0.1:${p}/api/dashboard`);
+    return r.headers.get("content-security-policy") ?? "";
+  }
+
+  function tmpDist(manifest?: string) {
+    const dir = join(tmpdir(), `skila-csp-manifest-${Math.random().toString(36).slice(2)}`);
+    mkdirSync(dir, { recursive: true });
+    if (manifest !== undefined) writeFileSync(join(dir, "csp-hashes.json"), manifest);
+    return { dir, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+  }
+
+  const cases: Array<[string, string | undefined]> = [
+    ["missing manifest", undefined],
+    ["unparseable JSON", "{ not json"],
+    ["empty hash list", JSON.stringify({ scriptSrc: [] })],
+    ["wrong shape", JSON.stringify({ scriptSrc: "sha256-abc" })],
+    ["malformed hash entry", JSON.stringify({ scriptSrc: ["'unsafe-inline'"] })],
+    ["injection attempt via hash", JSON.stringify({ scriptSrc: ["sha256-x' 'unsafe-inline"] })],
+  ];
+
+  cases.forEach(([name, manifest], i) => {
+    it(`${name} → never widens the policy`, async () => {
+      const env = setupEnv();
+      const dist = tmpDist(manifest);
+      try {
+        const csp = await cspFor(dist.dir, 17970 + i);
+        const scriptSrc = csp.split(";").map(s => s.trim()).find(s => s.startsWith("script-src")) ?? "";
+        expect(scriptSrc).toBe("script-src 'self'");
+        expect(scriptSrc).not.toContain("unsafe");
+      } finally { dist.cleanup(); env.cleanup(); }
+    });
+  });
+
+  it("a valid manifest is applied verbatim", async () => {
+    const env = setupEnv();
+    const hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    const dist = tmpDist(JSON.stringify({ scriptSrc: [hash] }));
+    try {
+      const csp = await cspFor(dist.dir, 17990);
+      expect(csp).toContain(`script-src 'self' '${hash}'`);
+    } finally { dist.cleanup(); env.cleanup(); }
+  });
+});
+
+describe("Phase 1 — CSP hash manifest ships with the package", () => {
+  it("package.json files[] covers dist/, which carries csp-hashes.json", () => {
+    const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { files: string[] };
+    // The manifest lives in dist/web/, so a bare "dist" entry is what ships it.
+    expect(pkg.files).toContain("dist");
+  });
+});
+
+describe("Phase 1 — bundled vendor code is tracked", () => {
+  // These packages are devDependencies that esbuild inlines into the published
+  // bundle, so `npm audit --omit=dev` cannot see them. The tracking list must
+  // not silently fall behind what the build actually bundles.
+  const auditSrc = readFileSync(join(ROOT, "scripts", "vendor-audit.mjs"), "utf8");
+  const shimSrc = readFileSync(join(ROOT, "scripts", "postbuild.mjs"), "utf8");
+
+  it("every package bundled into the vendor entry is in the audit list", () => {
+    const start = shimSrc.indexOf("const ENTRY_SHIM_SOURCE");
+    const end = shimSrc.indexOf("writeFileSync(entryShim, ENTRY_SHIM_SOURCE)");
+    const shim = shimSrc.slice(start, end);
+    // Packages the shim re-exports, i.e. what lands inside cm.js.
+    const bundled = [...shim.matchAll(/from \\"([^"\\]+)\\"/g)].map(m => m[1]);
+    expect(bundled.length).toBeGreaterThan(0);
+    for (const pkg of bundled) {
+      // Keys may be bare (marked:) or quoted ("@codemirror/state":).
+      const tracked = auditSrc.includes(`"${pkg}"`) || new RegExp(`^\\s*${pkg.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}\\s*:`, "m").test(auditSrc);
+      expect(tracked, `${pkg} is bundled but missing from vendor-audit.mjs`).toBe(true);
+    }
+  });
+
+  it("tracks echarts, which postbuild bundles separately", () => {
+    expect(shimSrc).toContain('"echarts", "index.js"');
+    expect(auditSrc).toContain("echarts:");
+  });
+
+  it("exposes an audit:vendor script", () => {
+    const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { scripts: Record<string, string> };
+    expect(pkg.scripts["audit:vendor"]).toBe("node scripts/vendor-audit.mjs");
+  });
+});
+
 describe("Phase 1 — built artifact stays CSP-compatible", () => {
   const indexPath = join(DIST_WEB, "index.html");
 
@@ -127,25 +218,56 @@ describe("Phase 1 — built artifact stays CSP-compatible", () => {
 });
 
 describe("Phase 1 — DOMPurify neutralises hostile Markdown", () => {
-  // Mirrors PURIFY_CFG in src/web/index.html. Kept in sync deliberately: this
-  // is the contract the preview path relies on.
-  const PURIFY_CFG = {
-    ALLOWED_TAGS: [
-      "h1","h2","h3","h4","h5","h6","p","br","hr","strong","b","em","i","del","s",
-      "code","pre","blockquote","ul","ol","li","table","thead","tbody","tr","th","td",
-      "a","img","details","summary",
-    ],
-    ALLOWED_ATTR: ["href","src","alt","title","class","id","align","width","height"],
-    ALLOW_DATA_ATTR: false,
-  };
+  // The config is NOT redeclared here. index.html is a standalone artifact with
+  // no import mechanism, so a hand-copied PURIFY_CFG would silently stop
+  // reflecting reality the moment the real one changed. Extract the actual
+  // source instead: if someone loosens the allowlist in index.html, these
+  // assertions see the loosened config and fail.
+  const HTML_SRC = readFileSync(join(ROOT, "src", "web", "index.html"), "utf8");
 
-  async function render(md: string): Promise<string> {
+  function extractPurifyCfg(): Record<string, unknown> {
+    const start = HTML_SRC.indexOf("const PURIFY_CFG = {");
+    expect(start, "PURIFY_CFG not found in src/web/index.html").toBeGreaterThan(-1);
+    const open = HTML_SRC.indexOf("{", start);
+    let depth = 0, end = -1;
+    for (let i = open; i < HTML_SRC.length; i++) {
+      if (HTML_SRC[i] === "{") depth++;
+      else if (HTML_SRC[i] === "}") { depth--; if (depth === 0) { end = i + 1; break; } }
+    }
+    expect(end, "PURIFY_CFG object literal is unterminated").toBeGreaterThan(open);
+    const literal = HTML_SRC.slice(open, end).replace(/\/\/[^\n]*/g, "");
+    return Function(`"use strict"; return (${literal});`)() as Record<string, unknown>;
+  }
+
+  const PURIFY_CFG = extractPurifyCfg();
+
+  // Mirrors `function safeMarkdown(src)` in index.html — same two-step pipeline
+  // the real sinks call, with the real config.
+  async function safeMarkdown(src: string): Promise<string> {
     const { marked } = await import("marked");
     const { JSDOM } = await import("jsdom");
     const createDOMPurify = (await import("dompurify")).default;
     const purify = createDOMPurify(new JSDOM("").window as unknown as Window & typeof globalThis);
-    return purify.sanitize(await marked.parse(md), PURIFY_CFG);
+    return purify.sanitize(await marked.parse(src), PURIFY_CFG);
   }
+  const render = safeMarkdown;
+
+  it("both innerHTML sinks in index.html route through safeMarkdown", () => {
+    // The regression this guards: someone adds a third preview path, or reverts
+    // one of these to a bare marked.parse().
+    const sinks = [...HTML_SRC.matchAll(/innerHTML\s*=\s*([A-Za-z_$][\w$]*)\s*\(/g)].map(m => m[1]);
+    expect(sinks).toContain("safeMarkdown");
+    expect(HTML_SRC.match(/innerHTML\s*=\s*safeMarkdown\(/g)?.length).toBe(2);
+    // No sink may pass marked output to innerHTML without sanitizing.
+    expect(HTML_SRC).not.toMatch(/innerHTML\s*=\s*marked\.parse\(/);
+  });
+
+  it("the extracted config is the hardened one (no style, no data-*)", () => {
+    expect(PURIFY_CFG.ALLOW_DATA_ATTR).toBe(false);
+    expect(PURIFY_CFG.ALLOWED_ATTR as string[]).not.toContain("style");
+    expect(PURIFY_CFG.ALLOWED_TAGS as string[]).not.toContain("script");
+    expect(PURIFY_CFG.ALLOWED_TAGS as string[]).not.toContain("iframe");
+  });
 
   it("strips <script> blocks", async () => {
     const out = await render(`ok\n\n<script>window.pwned=1</script>\n`);
@@ -200,5 +322,40 @@ describe("Phase 1 — DOMPurify neutralises hostile Markdown", () => {
     expect(out).toContain('href="https://example.test/page"');
     // marked emits class="language-js" on fenced blocks — class must survive.
     expect(out).toMatch(/class="language-js"/);
+  });
+
+  // Asserting on the parsed DOM rather than the HTML string: a substring check
+  // can pass while the live document still holds an executable attribute.
+  it("produces a DOM with no executable attributes or nodes", async () => {
+    const { JSDOM } = await import("jsdom");
+    const hostile = [
+      `<img src=x onerror="window.pwned=1">`,
+      `<a href="javascript:window.pwned=1">x</a>`,
+      `[md link](javascript:window.pwned=1)`,
+      `<script>window.pwned=1</script>`,
+      `<iframe src="data:text/html,<script>parent.pwned=1</script>"></iframe>`,
+      `<svg><foreignObject><body onload="window.pwned=1"></body></foreignObject></svg>`,
+      `<details open ontoggle="window.pwned=1">x</details>`,
+      `<p style="background:url(http://evil.test)">x</p>`,
+    ].join("\n\n");
+
+    const dom = new JSDOM(`<div id="preview-rendered"></div>`);
+    const host = dom.window.document.getElementById("preview-rendered")!;
+    host.innerHTML = await render(hostile);
+
+    for (const el of host.querySelectorAll("*")) {
+      for (const attr of el.getAttributeNames()) {
+        expect(attr.toLowerCase().startsWith("on"), `${el.tagName} kept ${attr}`).toBe(false);
+        expect(attr.toLowerCase()).not.toBe("style");
+        const v = el.getAttribute(attr) ?? "";
+        expect(/^\s*javascript:/i.test(v), `${el.tagName}[${attr}] = ${v}`).toBe(false);
+      }
+    }
+    expect(host.querySelector("script")).toBeNull();
+    expect(host.querySelector("iframe")).toBeNull();
+    expect(host.querySelector("svg")).toBeNull();
+    // jsdom does not execute injected markup, so the meaningful assertion is
+    // that no executable surface survived — checked attribute-by-attribute above.
+    expect((dom.window as unknown as Record<string, unknown>).pwned).toBeUndefined();
   });
 });
