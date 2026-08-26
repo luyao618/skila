@@ -46,8 +46,10 @@ describe("FIX-H3 — auto-promote race lockfile + idempotency", () => {
     // Create the draft skill in the test skills root
     createDraftSkill(env.skillsRoot, name);
 
-    // Record enough invocations to meet the promotion floor (≥10)
-    for (let i = 0; i < 10; i++) {
+    // Record enough invocations to clear promotionFloorInvocations (3) but stay
+    // under publishFloorInvocations (10) — otherwise the skill would legitimately
+    // promote twice (draft→staging→published) and mask what this test guards.
+    for (let i = 0; i < 3; i++) {
       await recordInvocation(name, "success");
     }
 
@@ -75,7 +77,10 @@ describe("FIX-H3 — auto-promote race lockfile + idempotency", () => {
 
     createDraftSkill(env.skillsRoot, name);
 
-    for (let i = 0; i < 10; i++) {
+    // Stay under publishFloorInvocations (10) so the second call has no
+    // staging→published rule to match — the no-op here must come from
+    // idempotency, not from a further promotion.
+    for (let i = 0; i < 3; i++) {
       await recordInvocation(name, "success");
     }
 

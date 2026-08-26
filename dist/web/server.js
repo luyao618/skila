@@ -86,7 +86,14 @@ export async function startServer(opts = {}) {
         };
         tryBind();
     });
-    const close = () => new Promise((r, e) => server.close(err => err ? e(err) : r()));
+    // server.close() only stops new connections — it waits for existing keep-alive
+    // sockets to drain. A route that answers early without consuming the request
+    // body (413/415 on a large PUT) leaves such a socket behind, so close() can
+    // stall for seconds. Tear those down explicitly so shutdown is prompt.
+    const close = () => new Promise((r, e) => {
+        server.close(err => err ? e(err) : r());
+        server.closeAllConnections();
+    });
     return { port, close, token: serverToken };
 }
 const LIFECYCLE_ACTIONS = new Set(["promote", "graduate", "reject", "archive", "reactivate", "rollback", "move"]);

@@ -19,6 +19,14 @@ afterEach(async () => {
   delete process.env.SKILA_SKILLS_ROOT;
 });
 
+/**
+ * Recent enough that the dashboard's auto-archive rule (usageCount < 2 and no
+ * activity for 7 days) leaves these fixtures alone. These tests assert
+ * aggregation, not archival — a hardcoded past date silently archives the
+ * draft/staging fixtures and zeroes out the counts under test.
+ */
+const RECENT_ISO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
 /** Build a minimal SKILL.md for a skill with given name + status. */
 function makeSkillMd(name: string, status: string, version = "0.1.0") {
   return `---
@@ -29,9 +37,9 @@ skila:
   status: ${status}
   parentVersion: null
   revisionCount: 0
-  lastImprovedAt: "2026-01-01T00:00:00.000Z"
+  lastImprovedAt: "${RECENT_ISO}"
   changelog:
-    - { version: "${version}", date: "2026-01-01T00:00:00.000Z", change: "Initial" }
+    - { version: "${version}", date: "${RECENT_ISO}", change: "Initial" }
   source: skila-distill
 ---
 

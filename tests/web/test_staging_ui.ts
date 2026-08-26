@@ -23,6 +23,14 @@ afterEach(async () => {
   delete process.env.SKILA_SKILLS_ROOT;
 });
 
+/**
+ * Recent enough that the dashboard's auto-archive rule (usageCount < 2 and no
+ * activity for 7 days) leaves this fixture in staging. These tests assert the
+ * staging surface, not archival — a hardcoded past date silently archives the
+ * skill before the assertions run.
+ */
+const RECENT_ISO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
 function makeStagingSkill(name: string, warnings?: object[]) {
   const warningsYaml = ""; // stored out-of-band via judge-warnings
   return `---
@@ -33,10 +41,10 @@ skila:
   status: staging
   parentVersion: "0.1.0"
   revisionCount: 1
-  lastImprovedAt: "2026-01-01T00:00:00.000Z"
+  lastImprovedAt: "${RECENT_ISO}"
   changelog:
-    - { version: "0.1.0", date: "2026-01-01T00:00:00.000Z", change: "Initial" }
-    - { version: "0.2.0", date: "2026-02-01T00:00:00.000Z", change: "Auto-staged" }
+    - { version: "0.1.0", date: "${RECENT_ISO}", change: "Initial" }
+    - { version: "0.2.0", date: "${RECENT_ISO}", change: "Auto-staged" }
   source: skila-distill
 ---
 
